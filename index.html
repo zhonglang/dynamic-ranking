@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>动态排行榜生成器</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -59,12 +60,21 @@
         <!-- 控制按钮 -->
         <div class="controls">
             <button id="run-animation" class="primary-button">运行动画</button>
+            <button id="download-video" class="secondary-button" disabled>下载视频</button>
+        </div>
+
+        <!-- 录制状态提示 -->
+        <div id="recording-status" class="recording-status" style="display: none;">
+            <span class="recording-dot"></span>
+            正在录制视频...
         </div>
 
         <!-- 排行榜展示区域 -->
-        <div class="ranking-container">
-            <div id="ranking-title" class="ranking-title"></div>
-            <div id="ranking-content">
+        <div class="ranking-container" id="ranking-container">
+            <canvas id="ranking-canvas"></canvas>
+            <!-- DOM 版本用于显示（Canvas用于录制） -->
+            <div id="ranking-title" class="ranking-title" style="position: absolute; top: 20px; left: 0; right: 0; text-align: center;"></div>
+            <div id="ranking-content" style="position: absolute; top: 120px; left: 20px; right: 20px; bottom: 20px;">
                 <div class="empty-state">
                     <p>请输入数据并点击"运行动画"</p>
                 </div>
