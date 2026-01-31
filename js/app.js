@@ -345,7 +345,7 @@ class DynamicRanking {
                 percentage: percentage,
                 // 动画状态
                 y: -50, // 初始在屏幕上方外
-                opacity: 0,
+                // opacity: 0,
                 animate: false, // 是否开始动画
                 delay: i * (this.flyInDuration + this.intervalDuration * 1000),
                 startTime: 0
@@ -454,7 +454,7 @@ class DynamicRanking {
      * 绘制标题
      */
     drawTitle() {
-        const titleY = 60;
+        const titleY = 90;
         const titleHeight = 80;
 
         // 标题背景
@@ -486,8 +486,8 @@ class DynamicRanking {
     drawItem(item, animatingCount) {
         if (!item.animate || item.opacity <= 0) return;
 
-        const startY = 120;
-        const itemHeight = 40;
+        const startY = 140;
+        const itemHeight = 35;
         const itemMargin = 10;
 
         // 计算项目位置：基于动画进程，每个项目根据弹出顺序动态计算位置
@@ -631,12 +631,21 @@ class DynamicRanking {
             // 直接从 Canvas 录制
             const stream = this.canvas.captureStream(30); // 30 fps
 
-            // 创建 MediaRecorder
-            const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-                ? 'video/webm;codecs=vp9'
-                : MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
-                ? 'video/webm;codecs=vp8'
-                : 'video/webm';
+            // 优先尝试 MP4 格式
+            let mimeType;
+            if (MediaRecorder.isTypeSupported('video/mp4')) {
+                mimeType = 'video/mp4';
+            } else if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')) {
+                mimeType = 'video/mp4;codecs=avc1';
+            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+                mimeType = 'video/webm;codecs=vp9';
+            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+                mimeType = 'video/webm;codecs=vp8';
+            } else {
+                mimeType = 'video/webm';
+            }
+
+            this.videoMimeType = mimeType;
 
             this.mediaRecorder = new MediaRecorder(stream, {
                 mimeType,
@@ -652,7 +661,7 @@ class DynamicRanking {
             };
 
             this.mediaRecorder.onstop = () => {
-                this.recordedBlob = new Blob(this.recordedChunks, { type: 'video/webm' });
+                this.recordedBlob = new Blob(this.recordedChunks, { type: this.videoMimeType });
                 this.downloadButton.disabled = false;
                 this.downloadButton.textContent = '下载视频';
                 this.recordingStatus.style.display = 'none';
@@ -661,7 +670,7 @@ class DynamicRanking {
             };
 
             this.mediaRecorder.start(100); // 每100ms产生一个数据块
-            this.log('MediaRecorder 已启动');
+            this.log('MediaRecorder 已启动，格式: ' + mimeType);
             this.isRecording = true;
 
         } catch (error) {
@@ -694,10 +703,11 @@ class DynamicRanking {
             return;
         }
 
-        // 生成文件名
+        // 生成文件名，根据 MIME 类型确定扩展名
         const title = this.titleInput.value.trim() || '排行榜';
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-        const filename = `${title}_${timestamp}.webm`;
+        const extension = this.videoMimeType && this.videoMimeType.includes('mp4') ? 'mp4' : 'webm';
+        const filename = `${title}_${timestamp}.${extension}`;
 
         // 创建下载链接
         const url = URL.createObjectURL(this.recordedBlob);
