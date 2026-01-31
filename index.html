@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态排行榜生成器</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>动态排行榜生成器</h1>
+
+        <!-- 数据输入区域 -->
+        <div class="input-section">
+            <div class="tabs">
+                <button class="tab-button active" data-tab="text">文本输入</button>
+                <button class="tab-button" data-tab="file">文件上传</button>
+            </div>
+
+            <!-- 文本输入标签页 -->
+            <div class="tab-content active" id="text-tab">
+                <textarea id="data-input" placeholder="输入JSON数据，格式如：
+[
+  {&quot;name&quot;: &quot;白羊座&quot;, &quot;value&quot;: 100},
+  {&quot;name&quot;: &quot;金牛座&quot;, &quot;value&quot;: 200}
+]
+或者：
+{
+  &quot;白羊座&quot;: 100,
+  &quot;金牛座&quot;: 200
+}"></textarea>
+            </div>
+
+            <!-- 文件上传标签页 -->
+            <div class="tab-content" id="file-tab">
+                <div class="file-upload">
+                    <input type="file" id="file-input" accept=".json,.txt">
+                    <label for="file-input" class="file-label">
+                        <span>点击或拖拽文件到此处</span>
+                        <small>支持 JSON 和 TXT 格式</small>
+                    </label>
+                </div>
+                <div id="file-info" class="file-info"></div>
+            </div>
+        </div>
+
+        <!-- 设置区域 -->
+        <div class="settings-section">
+            <div class="setting-item">
+                <label for="title-input">排行榜标题：</label>
+                <input type="text" id="title-input" value="2024年度排行榜" placeholder="请输入标题">
+            </div>
+            <div class="setting-item">
+                <label for="animation-duration">条形图间隔时间（秒）：</label>
+                <input type="number" id="animation-duration" value="0.5" min="0.1" max="2" step="0.1">
+            </div>
+        </div>
+
+        <!-- 控制按钮 -->
+        <div class="controls">
+            <button id="run-animation" class="primary-button">运行动画</button>
+            <button id="export-video" class="secondary-button" disabled>导出视频</button>
+        </div>
+
+        <!-- 排行榜展示区域 -->
+        <div class="ranking-container">
+            <div id="ranking-title" class="ranking-title"></div>
+            <div id="ranking-content">
+                <div class="empty-state">
+                    <p>请输入数据并点击"运行动画"</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Canvas 用于视频录制 -->
+    <canvas id="recording-canvas" style="display: none;"></canvas>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
