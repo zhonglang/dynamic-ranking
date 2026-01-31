@@ -80,10 +80,18 @@ class DynamicRanking {
             // 按值从小到大排序（第1名是最大值）
             items.sort((a, b) => a.value - b.value);
 
-            // 为每个项目分配随机颜色
-            items.forEach((item, index) => {
-                item.color = this.generateRandomColor(index);
-                item.opacity = 0.5 + (index / items.length) * 0.3;
+            // 计算最大值和最小值用于透明度计算
+            const maxValue = items[items.length - 1].value;
+            const minValue = items[0].value;
+            const valueRange = maxValue - minValue || 1;
+
+            // 为每个项目分配随机颜色和透明度
+            items.forEach((item) => {
+                // 生成完全随机的颜色（每次运行都不一样）
+                item.color = this.generateRandomColor();
+                // 值越小透明度越高：0.5（最小值）到 1.0（最大值）
+                const valueRatio = (item.value - minValue) / valueRange;
+                item.opacity = 0.5 + valueRatio * 0.5;
             });
 
             return items;
@@ -226,17 +234,13 @@ class DynamicRanking {
     }
 
     /**
-     * 生成随机颜色
+     * 生成随机颜色（每次运行都不一样）
      */
-    generateRandomColor(seed) {
-        // 使用简单的伪随机数生成器，确保相同排名得到相同颜色
-        const x = Math.sin(seed * 9999) * 10000;
-        const random = x - Math.floor(x);
-
-        // 使用HSL颜色空间，生成鲜艳的颜色
-        const hue = Math.floor(random * 360);
-        const saturation = 70 + Math.floor(random * 20); // 70-90% 饱和度
-        const lightness = 50 + Math.floor(random * 15); // 50-65% 亮度
+    generateRandomColor() {
+        // 完全随机的 HSL 颜色
+        const hue = Math.floor(Math.random() * 360);
+        const saturation = 70 + Math.floor(Math.random() * 20); // 70-90% 饱和度
+        const lightness = 50 + Math.floor(Math.random() * 15); // 50-65% 亮度
 
         return {
             hsl: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
@@ -540,21 +544,22 @@ class DynamicRanking {
         let textColor = '#ffffff';
         if (item.displayRank === 1) {
             barColor = ['#FFD700', '#FFA500'];
-            textColor = '#1a202c';
+            // textColor = '#1a202c';
         } else if (item.displayRank === 2) {
             barColor = ['#C0C0C0', '#808080'];
-            textColor = '#1a202c';
+            // textColor = '#1a202c';
         } else if (item.displayRank === 3) {
             barColor = ['#CD7F32', '#8B4513'];
-            textColor = '#1a202c';
+            // textColor = '#1a202c';
         } else {
-            barColor = [item.color.hsl, `hsla(${item.color.h}, ${item.color.s}%, ${item.color.l - 10}%, 0.8)`];
+            // 使用 item.opacity 作为透明度
+            barColor = [item.color.hsl, `hsla(${item.color.h}, ${item.color.s}%, ${item.color.l - 10}%, ${item.opacity})`];
         }
 
         // 绘制条形图背景
         this.ctx.save();
         this.ctx.beginPath();
-        this.ctx.roundRect(20, y, maxBarWidth, itemHeight, 15);
+        this.ctx.roundRect(20, y, barWidth, itemHeight, 15);
         this.ctx.fillStyle = barColor[0];
         this.ctx.fill();
 
@@ -563,7 +568,7 @@ class DynamicRanking {
             gradient.addColorStop(0, barColor[0]);
             gradient.addColorStop(1, barColor[1]);
             this.ctx.fillStyle = gradient;
-            this.ctx.globalAlpha = item.opacity * (0.5 + (item.displayRank / this.animationItems.length) * 0.3);
+            this.ctx.globalAlpha = item.opacity;
         } else {
             const gradient = this.ctx.createLinearGradient(20, y, 20 + barWidth, y);
             gradient.addColorStop(0, barColor[0]);
@@ -592,13 +597,16 @@ class DynamicRanking {
         // 绘制名称和数值
         this.ctx.fillStyle = textColor;
         this.ctx.textAlign = 'left';
-        this.ctx.font = '600 15px -apple-system, sans-serif';
-        this.ctx.fillText(item.name, 55, y + 15);
+        this.ctx.font = '600 20px -apple-system, sans-serif';
+        this.ctx.fillText(item.name, 55, y + itemHeight / 2);
 
+        // 数值绘制在条形图右侧
         this.ctx.fillStyle = textColor;
         this.ctx.globalAlpha = item.opacity * 0.8;
-        this.ctx.font = '12px -apple-system, sans-serif';
-        this.ctx.fillText(item.value.toString(), 55, y + 32);
+        this.ctx.textAlign = 'right';
+        this.ctx.font = '20px -apple-system, sans-serif';
+        const valueX = 20 + barWidth + 10;
+        this.ctx.fillText(item.value.toString(), valueX, y + itemHeight / 2);
 
         this.ctx.restore();
     }
