@@ -6,6 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="dbd60bba-b186-48d9-9a8c-63bdf0d9c6c4" name="Changes" comment="完整版本">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/js/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/app.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -34,7 +36,7 @@
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.dp.ai.tool.code.settings.CodeAssistSettingsConfigurable&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;vcs.Git&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -59,7 +61,8 @@
       <workItem from="1769858603045" duration="5940000" />
       <workItem from="1769871390739" duration="2321000" />
       <workItem from="1769876581727" duration="1429000" />
-      <workItem from="1769880887562" duration="993000" />
+      <workItem from="1769880887562" duration="1750000" />
+      <workItem from="1769918605049" duration="761000" />
     </task>
     <task id="LOCAL-00001" summary="完整版本">
       <option name="closed" value="true" />
@@ -74,6 +77,17 @@
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="完整版本" />

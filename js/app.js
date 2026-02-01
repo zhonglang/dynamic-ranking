@@ -464,7 +464,7 @@ class DynamicRanking {
         titleGradient.addColorStop(1, 'rgba(118, 75, 162, 0.2)');
         this.ctx.fillStyle = titleGradient;
         this.ctx.beginPath();
-        this.ctx.roundRect(20, titleY - titleHeight/2, this.canvasWidth - 40, titleHeight, 15);
+        this.ctx.roundRect(10, titleY - titleHeight/2, this.canvasWidth - 20, titleHeight, 15);
         this.ctx.fill();
         this.ctx.restore();
 
