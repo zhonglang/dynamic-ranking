@@ -7,6 +7,7 @@ class DynamicRanking {
         this.data = [];
         this.intervalDuration = 0.5; // 条形图间隔时间（秒）
         this.flyInDuration = 1000; // 条形图飞入时间（毫秒），默认1秒
+        this.animationType = 'squeeze'; // 动画类型：squeeze, fade, slide, scale, flip, elevator
         this.isAnimating = false;
         this.isRecording = false;
         this.mediaRecorder = null;
@@ -110,6 +111,7 @@ class DynamicRanking {
         this.fileInfo = document.getElementById('file-info');
         this.titleInput = document.getElementById('title-input');
         this.durationInput = document.getElementById('animation-duration');
+        this.animationTypeSelect = document.getElementById('animation-type');
         this.runButton = document.getElementById('run-animation');
         this.downloadButton = document.getElementById('download-video');
         this.rankingContent = document.getElementById('ranking-content');
@@ -264,8 +266,10 @@ class DynamicRanking {
                 return;
             }
 
-            // 更新间隔时间
+            // 更新间隔时间和动画类型
             this.updateIntervalDuration();
+            this.animationType = this.animationTypeSelect.value;
+            this.log(`使用动画类型: ${this.animationType}`);
 
             // 禁用下载按钮
             this.downloadButton.disabled = true;
@@ -335,6 +339,9 @@ class DynamicRanking {
             const displayRank = maxCount - i; // 实际排名：第1名是最大值
             const percentage = (item.value / maxValue) * 100;
 
+            // 根据动画类型设置初始状态
+            let initialState = this.getInitialState(this.animationType);
+
             this.animationItems.push({
                 name: item.name,
                 value: item.value,
@@ -344,12 +351,33 @@ class DynamicRanking {
                 popupRank: actualRank, // 弹出顺序（1-12）
                 percentage: percentage,
                 // 动画状态
-                y: -50, // 初始在屏幕上方外
-                // opacity: 0,
+                ...initialState, // 初始状态（y, x, scale, rotation, opacity等）
                 animate: false, // 是否开始动画
                 delay: i * (this.flyInDuration + this.intervalDuration * 1000),
                 startTime: 0
             });
+        }
+    }
+
+    /**
+     * 根据动画类型获取初始状态
+     */
+    getInitialState(animationType) {
+        switch (animationType) {
+            case 'squeeze':
+                return { y: -50, x: 0, scale: 1, rotation: 0 };
+            case 'fade':
+                return { y: 0, x: 0, scale: 1, rotation: 0 }; // 不设置 opacity，使用原值
+            case 'slide':
+                return { y: 0, x: -400, scale: 1, rotation: 0 };
+            case 'scale':
+                return { y: 0, x: 0, scale: 0, rotation: 0 };
+            case 'flip':
+                return { y: 0, x: 0, scale: 1, rotation: 180 };
+            case 'elevator':
+                return { y: 600, x: 0, scale: 1, rotation: 0 };
+            default:
+                return { y: -50, x: 0, scale: 1, rotation: 0 };
         }
     }
 
@@ -394,25 +422,23 @@ class DynamicRanking {
                         const itemElapsed = currentTime - item.startTime;
                         const progress = Math.min(itemElapsed / this.flyInDuration, 1);
 
-                        // 缓动函数
-                        const easeOutBack = (t) => {
-                            const c1 = 1.70158;
-                            const c3 = c1 + 1;
-                            return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
-                        };
-
-                        const easedProgress = easeOutBack(progress);
-
-                        // 从上方滑入
-                        item.y = -50 + easedProgress * 50;
-                        item.opacity = progress;
+                        // 根据动画类型更新状态
+                        this.updateAnimationState(item, progress, currentTime);
                     }
                 });
 
-                // 绘制所有项目（从第一个到第二个，因为第一个在最下面）
-                // 第12名（弹出顺序1）先显示，第11名（弹出顺序2）后显示在上方
-                for (let i = this.animationItems.length - 1; i >= 0; i--) {
-                    this.drawItem(this.animationItems[i], animatingCount);
+                // 绘制所有项目
+                // 根据动画类型决定绘制顺序
+                if (this.animationType === 'squeeze') {
+                    // 挤压式：反向绘制（先弹出的在下面）
+                    for (let i = this.animationItems.length - 1; i >= 0; i--) {
+                        this.drawItem(this.animationItems[i], animatingCount);
+                    }
+                } else {
+                    // 其他动画类型：正向绘制
+                    for (let i = 0; i < this.animationItems.length; i++) {
+                        this.drawItem(this.animationItems[i], animatingCount);
+                    }
                 }
 
                 // 检查动画是否完成
@@ -436,6 +462,109 @@ class DynamicRanking {
 
             requestAnimationFrame(animate);
         });
+    }
+
+    /**
+     * 根据动画类型更新项目状态
+     */
+    updateAnimationState(item, progress, currentTime) {
+        switch (this.animationType) {
+            case 'squeeze':
+                this.updateSqueezeAnimation(item, progress);
+                break;
+            case 'fade':
+                this.updateFadeAnimation(item, progress);
+                break;
+            case 'slide':
+                this.updateSlideAnimation(item, progress);
+                break;
+            case 'scale':
+                this.updateScaleAnimation(item, progress);
+                break;
+            case 'flip':
+                this.updateFlipAnimation(item, progress);
+                break;
+            case 'elevator':
+                this.updateElevatorAnimation(item, progress);
+                break;
+            default:
+                this.updateSqueezeAnimation(item, progress);
+        }
+    }
+
+    /**
+     * 挤压式动画更新
+     */
+    updateSqueezeAnimation(item, progress) {
+        const easeOutBack = (t) => {
+            const c1 = 1.70158;
+            const c3 = c1 + 1;
+            return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+        };
+        const easedProgress = easeOutBack(progress);
+        item.currentY = -50 * (1 - easedProgress);
+    }
+
+    /**
+     * 淡入式动画更新
+     */
+    updateFadeAnimation(item, progress) {
+        // 使用 easeInOut 缓动
+        const easeInOut = (t) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        item.currentOpacity = easeInOut(progress);
+    }
+
+    /**
+     * 横向滑入式动画更新
+     */
+    updateSlideAnimation(item, progress) {
+        const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+        item.currentX = -400 * (1 - easeOutCubic(progress));
+    }
+
+    /**
+     * 缩放弹跳式动画更新
+     */
+    updateScaleAnimation(item, progress) {
+        const elasticOut = (t) => {
+            const c4 = (2 * Math.PI) / 3;
+            return t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+        };
+        item.currentScale = elasticOut(progress);
+    }
+
+    /**
+     * 翻转卡片式动画更新
+     */
+    updateFlipAnimation(item, progress) {
+        const easeOutBack = (t) => {
+            const c1 = 1.70158;
+            const c3 = c1 + 1;
+            return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+        };
+        item.currentRotation = 180 * (1 - easeOutBack(progress));
+        // 翻转到90度时透明度为0
+        item.currentOpacity = progress < 0.5 ? 1 - progress * 2 : (progress - 0.5) * 2;
+    }
+
+    /**
+     * 升降机式动画更新
+     */
+    updateElevatorAnimation(item, progress) {
+        const easeOutBounce = (t) => {
+            const n1 = 7.5625;
+            const d1 = 2.75;
+            if (t < 1 / d1) {
+                return n1 * t * t;
+            } else if (t < 2 / d1) {
+                return n1 * (t -= 1.5 / d1) * t + 0.75;
+            } else if (t < 2.5 / d1) {
+                return n1 * (t -= 2.25 / d1) * t + 0.9375;
+            } else {
+                return n1 * (t -= 2.625 / d1) * t + 0.984375;
+            }
+        };
+        item.currentY = 600 * (1 - easeOutBounce(progress));
     }
 
     /**
@@ -510,30 +639,78 @@ class DynamicRanking {
 
         const easedProgress = easeOutBack(progress);
 
-        // 顶部进入动画：从 -50 开始，到 0
-        const topOffset = -50 * (1 - easedProgress);
+        // 根据动画类型计算位置
+        let drawY, drawX = 0;
 
-        // 当前弹出的项目中，有 popupRank <= item.popupRank 的数量（包括自己）
-        const itemsAbove = this.animationItems.filter(i => i.animate && i.popupRank <= item.popupRank).length;
+        switch (this.animationType) {
+            case 'squeeze':
+                // 挤压式：基于当前已显示的项目动态计算位置
+                const topOffset = -50 * (1 - easedProgress);
+                const itemsAboveCurrent = this.animationItems.filter(i => i.animate && i.popupRank > item.popupRank).length;
+                currentPosition = startY + itemsAboveCurrent * (itemHeight + itemMargin) + topOffset;
+                drawY = currentPosition;
+                break;
+            case 'fade':
+            case 'scale':
+            case 'flip':
+            case 'slide':
+            case 'elevator':
+            default:
+                // 其他动画类型：固定位置
+                drawY = startY + (item.displayRank - 1) * (itemHeight + itemMargin);
+                drawX = 0;
+                break;
+        }
 
-        // 计算动画中的位置（会被挤下去）
-        // 项目上方有 (itemsAbove - 1) 个项目，所以它的位置是 startY + (itemsAbove - 1) * height
-        const animatingPosition = startY + (itemsAbove - 1) * (itemHeight + itemMargin);
-
-        // 根据动画进度插值：从动画位置到最终位置
-        // 在动画初期，项目在 animatingPosition；动画完成后，项目在 finalPosition
-        // 但实际上我们希望：新项目从顶部滑入，把旧项目挤下去
-        // 所以每个项目在动画过程中始终保持动态挤压效果
-
-        // 当前显示位置：基于 animatingCount 和 popupRank
-        // popupRank 较小的项目（先弹出的）会被 popupRank 较大的项目挤下去
-        const itemsAboveCurrent = this.animationItems.filter(i => i.animate && i.popupRank > item.popupRank).length;
-        currentPosition = startY + itemsAboveCurrent * (itemHeight + itemMargin) + topOffset;
-
-        const y = currentPosition;
+        const y = drawY;
+        const x = drawX;
 
         this.ctx.save();
-        this.ctx.globalAlpha = item.opacity;
+
+        // 根据动画类型计算透明度
+        let drawOpacity = item.opacity;
+        if (this.animationType === 'fade') {
+            // 使用在 updateAnimationState 中已计算好的 currentOpacity
+            drawOpacity *= (item.currentOpacity !== undefined ? item.currentOpacity : 1);
+        } else if (this.animationType === 'flip') {
+            // 使用在 updateAnimationState 中已计算好的 currentOpacity
+            drawOpacity *= (item.currentOpacity !== undefined ? item.currentOpacity : 1);
+        }
+
+        this.ctx.globalAlpha = drawOpacity;
+
+        // 应用动画变换
+        const centerX = this.canvasWidth / 2;
+        const centerY = y + itemHeight / 2;
+
+        switch (this.animationType) {
+            case 'scale':
+                // 缩放动画 - 使用预先计算好的 currentScale
+                const scale = item.currentScale !== undefined ? item.currentScale : 1;
+                this.ctx.translate(centerX, centerY);
+                this.ctx.scale(scale, scale);
+                this.ctx.translate(-centerX, -centerY);
+                break;
+            case 'flip':
+                // 翻转动画 - 使用预先计算好的 currentRotation
+                const rotation = item.currentRotation !== undefined ? item.currentRotation : 0;
+                const rotationRad = (rotation * Math.PI) / 180;
+                const scaleX = Math.abs(Math.cos(rotationRad));
+                this.ctx.translate(centerX, centerY);
+                this.ctx.scale(scaleX, 1);
+                this.ctx.translate(-centerX, -centerY);
+                break;
+            case 'slide':
+                // 横向滑入 - 使用预先计算好的 currentX
+                const offsetX = item.currentX !== undefined ? item.currentX : 0;
+                this.ctx.translate(offsetX, 0);
+                break;
+            case 'elevator':
+                // 升降机式 - 使用预先计算好的 currentY
+                const offsetY = item.currentY !== undefined ? item.currentY : 0;
+                this.ctx.translate(0, offsetY);
+                break;
+        }
 
         // 计算条形图宽度
         const maxBarWidth = this.canvasWidth - 40;
@@ -568,7 +745,7 @@ class DynamicRanking {
             gradient.addColorStop(0, barColor[0]);
             gradient.addColorStop(1, barColor[1]);
             this.ctx.fillStyle = gradient;
-            this.ctx.globalAlpha = item.opacity;
+            this.ctx.globalAlpha = drawOpacity;
         } else {
             const gradient = this.ctx.createLinearGradient(20, y, 20 + barWidth, y);
             gradient.addColorStop(0, barColor[0]);
@@ -602,7 +779,7 @@ class DynamicRanking {
 
         // 数值绘制在条形图右侧
         this.ctx.fillStyle = textColor;
-        this.ctx.globalAlpha = item.opacity * 0.8;
+        this.ctx.globalAlpha = drawOpacity * 0.8;
         this.ctx.textAlign = 'right';
         this.ctx.font = '20px -apple-system, sans-serif';
         const valueX = 20 + barWidth + 10;

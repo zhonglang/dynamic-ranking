@@ -216,8 +216,24 @@ textarea:focus {
 }
 
 .setting-item input[type="text"]:focus,
-.setting-item input[type="number"]:focus {
+.setting-item input[type="number"]:focus,
+.setting-item select:focus {
     outline: none;
+    border-color: #667eea;
+}
+
+.setting-item select {
+    width: 250px;
+    padding: 8px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 16px;
+    background-color: white;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+}
+
+.setting-item select:hover {
     border-color: #667eea;
 }
 
