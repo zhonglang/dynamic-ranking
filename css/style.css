@@ -4,12 +4,29 @@
     box-sizing: border-box;
 }
 
+html, body {
+    height: 100%;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    padding: 20px;
+    height: 100vh;
+    padding: 12px; /* smaller padding to save vertical space */
     color: #333;
+    overflow: hidden; /* no scrollbars on page */
+}
+
+/* CSS 自定义属性 */
+:root {
+    --fly-in-duration: 0.5s;
+    /* Layout / spacing */
+    --panel-bg: rgba(247, 250, 252, 1);
+    --muted: #6b7280;
+    --accent: #667eea;
+    --gap-sm: 8px;
+    --gap-md: 12px;
+    --panel-padding: 14px;
 }
 
 /* 主容器：左右布局 */
@@ -18,36 +35,193 @@ body {
     gap: 20px;
     max-width: 1400px;
     margin: 0 auto;
-    align-items: center;
-    height: calc(100vh - 40px);
+    align-items: stretch;
+    /* full viewport height minus body padding */
+    height: calc(100vh - 24px);
 }
 
 /* 左侧配置面板 */
 .config-panel {
-    flex: 0 0 auto;
-    min-width: 350px;
-    max-width: 450px;
-    height: 100%;
+    /* left panel 40% */
+    flex: 0 0 40%;
+    width: 40%;
+    min-width: 300px;
+    max-width: none;
     background: rgba(255, 255, 255, 0.95);
     border-radius: 20px;
-    padding: 30px;
+    padding: var(--panel-padding);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    position: relative;
+    /* grid: header | body (input+settings) | controls | recording */
+    display: grid;
+    grid-template-rows: auto 1fr auto 44px;
+    gap: 8px;
+    height: 100%;
+}
+
+/* 可滚动主体（用于放置较多设置） */
+.config-body {
+    display: grid;
+    /* Reserve a stable visible area for the input section so textarea won't be overlapped.
+       First row (input) between 150px and 320px; second row (settings) takes remaining space. */
+    grid-template-rows: minmax(150px, 320px) minmax(0, 1fr);
+    gap: 8px;
+    padding-right: 6px;
+    height: 100%;
+}
+
+/* Input area occupies a fixed fraction so textarea can be larger but bounded */
+.input-section {
+    /* placed into config-body first row */
+    padding: 6px 4px;
     display: flex;
     flex-direction: column;
+    gap: 8px;
+    overflow: hidden; /* internal scrolling handled by textarea */
+}
+
+/* Ensure input area can't grow too tall and push buttons offscreen */
+.input-section .tab-content {
+    height: 100%;
+}
+
+.input-section textarea {
+    width: 100%;
+    height: 160px; /* safe height so it fits above controls */
+    max-height: 100%;
+    overflow: auto; /* scroll inside the textarea */
+    box-sizing: border-box;
+    padding: 10px;
+}
+
+@media (max-height: 700px) {
+    .input-section textarea { height: 120px; }
+}
+
+.settings-section {
+    padding: 12px;
+    overflow: auto; /* allow internal scroll if settings exceed available height */
+    display: flex;
+    flex-direction: column;
+    background: var(--panel-bg);
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(16,24,40,0.04);
+    gap: var(--gap-md);
+}
+
+.settings-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--gap-sm) var(--gap-md);
+    align-items: start;
+}
+
+.settings-left, .settings-right {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Make each item in the left/right columns a simple two-column row (label | control) */
+.settings-left .setting-item,
+.settings-right .setting-item {
+    display: grid;
+    grid-template-columns: 1fr 130px; /* label | control */
+    align-items: center;
+    column-gap: var(--gap-md);
+}
+
+.settings-left .setting-item label,
+.settings-right .setting-item label {
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.settings-left .setting-item input,
+.settings-left .setting-item select,
+.settings-right .setting-item input,
+.settings-right .setting-item select {
+    width: 100%;
+    height: 40px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid #e6edf3;
+    background: #fff;
+    box-shadow: inset 0 1px 0 rgba(16,24,40,0.02);
+    font-size: 14px;
+}
+
+.settings-left .setting-item select {
+    padding-right: 28px;
+}
+
+.settings-left .setting-item input[type="text"] {
+    padding: 8px 12px;
+}
+
+.settings-left .setting-item input[type="number"],
+.settings-right .setting-item input[type="number"] {
+    max-width: 120px;
+}
+
+/* checkbox styling */
+.checkbox-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+
+.checkbox-group label {
+    margin-left: 8px;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.controls { height: auto; align-items: center; }
+.controls button { height: 44px; padding: 10px 20px; border-radius: 10px; }
+
+/* Panel controls styling */
+.panel-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 6px 0 6px;
+}
+
+/* Make panel-controls always visible by pinning above the recording status */
+.panel-controls {
+    position: static; /* occupy grid row, don't overlap content */
+    margin: 0; /* no negative margin to avoid overlap */
+    padding: 8px 6px 6px 6px;
+    z-index: 1;
+    background: transparent;
+}
+
+.panel-controls .controls { gap: 14px; }
+.preview-btn { background: linear-gradient(135deg,#4caf50,#2e7d32) !important; color: #fff; }
+
+.recording-status {
+    height: 44px;
+    padding: 8px 12px;
+    margin-top: 6px;
+    align-self: end;
 }
 
 /* 右侧预览面板 */
 .preview-panel {
-    flex: 1;
+    flex: 0 0 60%;
+    width: 60%;
     background: rgba(255, 255, 255, 0.95);
     border-radius: 20px;
-    padding: 20px;
+    padding: 12px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100%;
 }
+
+/* 其他样式保持不变... */
 
 .container {
     max-width: 800px;
@@ -62,8 +236,8 @@ body {
 h1 {
     text-align: center;
     color: #4a5568;
-    margin-bottom: 30px;
-    font-size: 2.5em;
+    margin-bottom: 12px;
+    font-size: 1.6em;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -71,7 +245,7 @@ h1 {
 
 /* 输入区域样式 */
 .input-section {
-    margin-bottom: 25px;
+    margin-bottom: 0;
 }
 
 .tabs {
@@ -108,8 +282,9 @@ h1 {
 
 textarea {
     width: 100%;
-    min-height: 150px;
-    padding: 15px;
+    min-height: 70px;
+    max-height: 160px;
+    padding: 8px;
     border: 2px solid #e2e8f0;
     border-radius: 10px;
     font-size: 14px;
@@ -180,74 +355,80 @@ textarea:focus {
 
 /* 设置区域样式 */
 .settings-section {
-    margin-bottom: 25px;
-    padding: 20px;
+    margin-bottom: -20px;
+    padding: 12px;
     background: #f7fafc;
     border-radius: 10px;
 }
 
 .setting-item {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 110px; /* label | control */
     align-items: center;
-    gap: 15px;
+    gap: 8px 10px;
+    margin-bottom: 6px;
 }
 
 .setting-item label {
-    flex: 1;
+    justify-self: start;
     color: #4a5568;
     font-weight: 500;
+    font-size: 14px;
 }
 
-.setting-item input[type="number"] {
-    width: 80px;
-    padding: 8px;
-    border: 2px solid #e2e8f0;
-    border-radius: 6px;
-    font-size: 16px;
-    text-align: center;
-}
-
-.setting-item input[type="text"] {
-    width: 250px;
-    padding: 8px 12px;
-    border: 2px solid #e2e8f0;
-    border-radius: 6px;
-    font-size: 16px;
-}
-
-.setting-item input[type="text"]:focus,
-.setting-item input[type="number"]:focus,
-.setting-item select:focus {
-    outline: none;
-    border-color: #667eea;
-}
-
+.setting-item input[type="number"],
+.setting-item input[type="text"],
 .setting-item select {
-    width: 250px;
-    padding: 8px 12px;
+    width: 100%;
+    max-width: 120px;
+    padding: 6px 8px;
     border: 2px solid #e2e8f0;
     border-radius: 6px;
-    font-size: 16px;
-    background-color: white;
-    cursor: pointer;
-    transition: border-color 0.3s ease;
+    font-size: 14px;
+    box-sizing: border-box;
+    height: 36px;
 }
 
-.setting-item select:hover {
-    border-color: #667eea;
+.setting-item .checkbox-group {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+/* Controls visually part of the settings panel */
+.settings-controls {
+    margin-top: auto; /* push to bottom of settings-section */
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    padding-top: 10px;
+    border-top: 1px solid rgba(15,23,42,0.03);
+}
+
+.settings-controls button {
+    min-width: 120px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(16,24,40,0.06);
+    cursor: pointer;
+}
+
+.settings-controls .primary-button {
+    background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
+    color: #fff;
+}
+
+.settings-controls .primary-button[style] { /* keep preview green if inlined */ }
+
+.settings-controls .secondary-button {
+    background: #f3f4f6;
+    color: #374151;
 }
 
 /* 控制按钮样式 */
-.controls {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 30px;
-    justify-content: center;
-}
-
 .primary-button,
 .secondary-button {
-    padding: 12px 30px;
+    padding: 10px 20px;
     border: none;
     border-radius: 8px;
     font-size: 16px;
@@ -305,34 +486,37 @@ textarea:focus {
     left: 0;
     width: 100%;
     height: 100%;
-    display: none; /* 默认隐藏，录制时显示 */
+    display: none; /* 默认隐藏，录制或播放时显示 */
 }
 
-.ranking-container.recording #ranking-canvas {
+.ranking-container.recording #ranking-canvas,
+.ranking-container.playing #ranking-canvas {
     display: block;
 }
 
 .ranking-container.recording #ranking-title,
-.ranking-container.recording #ranking-content {
+.ranking-container.recording #ranking-content,
+.ranking-container.playing #ranking-title,
+.ranking-container.playing #ranking-content {
     display: none;
 }
 
 /* 排行榜标题样式 */
 .ranking-title {
     text-align: center;
-    font-size: 32px;
+    font-size: 24px;
     font-weight: bold;
     color: #ffffff;
-    margin-bottom: 20px;
-    padding: 20px 10px;
-    text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
-    border-radius: 15px;
-    min-height: 100px;
+    margin-bottom: 12px;
+    padding: 12px 8px;
+    text-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
+    border-radius: 12px;
+    min-height: 64px;
     display: flex;
     align-items: center;
     justify-content: center;
-    line-height: 1.3;
+    line-height: 1.2;
 }
 
 #ranking-content {
@@ -362,7 +546,7 @@ textarea:focus {
     overflow: hidden;
     opacity: 0;
     transform: translateX(-100%);
-    transition: opacity 0.2s ease, transform var(--fly-in-duration) cubic-bezier(0.175, 0.885, 0.32, 1.6);
+    transition: opacity 0.2s ease, transform var(--fly-in-duration, 0.5s) cubic-bezier(0.175, 0.885, 0.32, 1.6);
     margin-bottom: 10px;
     height: 40px;
     width: 100%;
@@ -462,26 +646,20 @@ textarea:focus {
 @media (max-width: 1024px) {
     .main-container {
         flex-direction: column;
-        height: auto;
+        height: 100vh;
     }
 
-    .config-panel {
-        max-width: 100%;
-        min-width: auto;
-        height: auto;
+    .config-panel, .preview-panel {
+        width: 100%;
+        flex: 0 0 100%;
     }
 
     .preview-panel {
-        width: 100%;
-        height: 100vh;
-        min-height: 500px;
+        height: auto;
+        min-height: 340px;
     }
 
-    .ranking-container {
-        height: auto;
-        max-height: none;
-        aspect-ratio: 9 / 16;
-    }
+    .settings-columns { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
@@ -523,6 +701,9 @@ textarea:focus {
         margin-bottom: 15px;
     }
 
+    .setting-item {
+        grid-template-columns: 1fr; /* stack on mobile */
+    }
     .setting-item input[type="text"] {
         width: 100%;
         font-size: 14px;
@@ -551,6 +732,8 @@ textarea:focus {
     .item-value {
         font-size: 11px;
     }
+
+    .panel-controls { position: static; bottom: auto; padding-top: 8px; }
 }
 
 /* 录制状态提示 */
@@ -587,4 +770,3 @@ textarea:focus {
         transform: scale(1.2);
     }
 }
-
