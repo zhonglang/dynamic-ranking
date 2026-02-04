@@ -51,6 +51,18 @@ class DynamicRanking {
         this.energyParticles = []; // 能量粒子
         this.starParticles = []; // 星光粒子
         
+        // 背景色参数
+        this.backgroundColor = 'dark'; // 默认背景色主题
+        this.backgroundThemes = {
+            dark: { name: '深色科技', gradient: ['#1a202c', '#2d3748'] },
+            blue: { name: '科技蓝', gradient: ['#0f172a', '#1e3a8a'] },
+            purple: { name: '科技紫', gradient: ['#1e0f2a', '#4c1d95'] },
+            green: { name: '科技绿', gradient: ['#0f1a1a', '#065f46'] },
+            red: { name: '科技红', gradient: ['#1a0f0f', '#991b1b'] },
+            cyber: { name: '赛博朋克', gradient: ['#0f0f1a', '#4c1d95'] },
+            space: { name: '太空深蓝', gradient: ['#0a0a1a', '#1e40af'] }
+        };
+        
         // 初始化科技感效果
         this.initTechEffects();
 
@@ -158,6 +170,28 @@ class DynamicRanking {
                 twinkleSpeed: 0.5 + Math.random() * 2,
                 twinkleOffset: Math.random() * Math.PI * 2
             });
+        }
+    }
+
+    /**
+     * 切换背景色主题
+     */
+    changeBackgroundColor(theme) {
+        if (this.backgroundThemes[theme]) {
+            this.backgroundColor = theme;
+            console.log(`背景色已切换为: ${this.backgroundThemes[theme].name}`);
+            
+            // 如果正在预览或录制，重新绘制Canvas
+            if (this.isRecording || this.isPreview) {
+                this.clearCanvas();
+                this.drawTitle();
+                // 重新绘制所有项目
+                this.animationItems.forEach(item => {
+                    if (item.animate) {
+                        this.drawItem(item, performance.now());
+                    }
+                });
+            }
         }
     }
 
@@ -409,6 +443,26 @@ class DynamicRanking {
             this.fireworksCoreRatioInput.addEventListener('change', () => {
                 const v = parseFloat(this.fireworksCoreRatioInput.value);
                 if (!isNaN(v) && v >= 0 && v <= 0.5) this.fireworksCoreRatio = v;
+            });
+        }
+
+        // 背景色主题选择器
+        this.backgroundThemeSelect = document.getElementById('background-theme');
+        if (this.backgroundThemeSelect) {
+            // 设置默认值
+            this.backgroundThemeSelect.value = this.backgroundColor;
+            
+            this.backgroundThemeSelect.addEventListener('change', (e) => {
+                const theme = e.target.value;
+                this.changeBackgroundColor(theme);
+            });
+        }
+
+        // 语音播报开关
+        this.speechEnableInput = document.getElementById('speech-enable');
+        if (this.speechEnableInput) {
+            this.speechEnableInput.addEventListener('change', () => {
+                this.speechEnabled = !!this.speechEnableInput.checked;
             });
         }
 
@@ -1402,9 +1456,10 @@ class DynamicRanking {
         this.ctx.restore();
 
         // 绘制半透明覆盖层，增强文字可读性
+        const currentTheme = this.backgroundThemes[this.backgroundColor] || this.backgroundThemes.dark;
         const gradient = this.ctx.createLinearGradient(0, 0, this.canvasWidth, this.canvasHeight);
-        gradient.addColorStop(0, '#1a202c');
-        gradient.addColorStop(1, '#2d3748');
+        gradient.addColorStop(0, currentTheme.gradient[0]);
+        gradient.addColorStop(1, currentTheme.gradient[1]);
         this.ctx.fillStyle = gradient;
         
         // 根据背景图透明度调整覆盖层透明度
