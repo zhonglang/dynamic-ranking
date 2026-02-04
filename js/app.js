@@ -6,7 +6,7 @@ class DynamicRanking {
     constructor() {
         // 烟花视觉参数（可由 UI 动态调整）
         this.fireworksTrailLength = 20; // 尾迹采样长度
-        this.fireworksGlow = 0.6; // 光晕强度（0-1）
+        this.fireworksGlow = 0.1; // 光晕强度（0-1）
         this.fireworksSpeedMul = 1.0; // 碎片速度倍数
         this.fireworksCoreRatio = 0.06; // 核心亮点占比
         this.data = [];
@@ -25,6 +25,12 @@ class DynamicRanking {
         this.initElements();
         this.initEventListeners();
 
+        // 背景图支持
+        this.bgImageFile = null; // 原始 File 对象
+        this.bgImageUrl = null; // Object URL
+        this.bgImageObj = null; // HTMLImageElement
+        this.bgOpacity = 1; // 0 - 1
+
         // 烟花状态（初始默认）
         this.fireworksEnabled = true; // 是否启用（从 UI 读取）
         this.isPreview = false; // 非录制的预览模式标志
@@ -32,13 +38,26 @@ class DynamicRanking {
         this.fireworksStartTime = 0;
         this.fireworksDuration = 3000; // 毫秒，烟花持续时长（可由 UI 覆盖）
         this.lastFireworkSpawn = 0;
-        this.fireworkSpawnInterval = 250; // 每隔多少ms产生一次烟花
+        this.fireworkSpawnInterval = 400; // 每隔多少ms产生一次烟花
         this.fireworkParticles = [];
-        this.fireworksDensity = 32; // 粒子密度基数（可由 UI 覆盖）
+        this.fireworksDensity = 10; // 粒子密度基数（可由 UI 覆盖）
         this.fireworkRockets = []; // 底部发射的火箭列表（每个在空中爆炸为粒子）
         this.fireworkRings = []; // 空中扩展的环形爆炸效果
 
         console.log('DynamicRanking initialized:', !!this);
+
+        // 在窗口大小变化时，如果预览/播放中需要重新初始化 canvas 尺寸
+        window.addEventListener('resize', () => {
+            try {
+                if (this.rankingContainer && this.rankingContainer.classList.contains('playing')) {
+                    // small debounce
+                    if (this._resizeTimeout) clearTimeout(this._resizeTimeout);
+                    this._resizeTimeout = setTimeout(() => {
+                        try { this.initCanvas(); } catch (e) { /* ignore */ }
+                    }, 120);
+                }
+            } catch (e) { /* ignore */ }
+        });
     }
 
     // 调试日志
@@ -146,6 +165,11 @@ class DynamicRanking {
         this.fireworksGlowInput = document.getElementById('fireworks-glow');
         this.fireworksSpeedInput = document.getElementById('fireworks-speed');
         this.fireworksCoreRatioInput = document.getElementById('fireworks-core-ratio');
+
+        // 新增：背景图控件与 DOM 预览元素
+        this.bgImageInput = document.getElementById('bg-image-input');
+        this.bgOpacityInput = document.getElementById('bg-opacity');
+        this.rankingBgImageEl = document.getElementById('ranking-bg-image');
     }
 
 
@@ -164,6 +188,34 @@ class DynamicRanking {
             this.fileInput.addEventListener('dragover', (e) => this.handleDragOver(e));
             this.fileInput.addEventListener('dragleave', (e) => this.handleDragLeave(e));
             this.fileInput.addEventListener('drop', (e) => this.handleFileDrop(e));
+        }
+
+        // 背景图上传处理
+        if (this.bgImageInput) {
+            this.bgImageInput.addEventListener('change', (e) => {
+                try {
+                    const file = e.target.files && e.target.files[0];
+                    if (file) this.loadBackgroundImage(file);
+                } catch (err) {
+                    console.error('背景图选择处理失败', err);
+                    this.showError('背景图选择失败: ' + (err && err.message ? err.message : err));
+                }
+            });
+        }
+        // 背景透明度监听
+        if (this.bgOpacityInput) {
+            this.bgOpacityInput.addEventListener('input', (e) => {
+                const v = parseFloat(e.target.value);
+                if (!isNaN(v)) {
+                    this.bgOpacity = Math.max(0, Math.min(1, v));
+                    // 更新 DOM 预览透明度
+                    if (this.rankingBgImageEl) {
+                        this.rankingBgImageEl.style.opacity = String(this.bgOpacity);
+                        // ensure visible when opacity > 0
+                        this.rankingBgImageEl.style.display = this.bgImageObj ? 'block' : 'none';
+                    }
+                }
+            });
         }
 
         // 控制按钮
@@ -338,11 +390,30 @@ class DynamicRanking {
             this.title = this.titleInput.value.trim() || '排行榜';
             this.rankingTitle.textContent = this.title;
 
-            // 初始化 Canvas
+            // 先切换为 playing 状态以确保 canvas 可见，从而正确测量尺寸
+            this.rankingContainer.classList.add('playing');
+
+            // 锁定当前容器尺寸，避免播放时被 layout 改变
+            this.lockContainerSize();
+
+            // 初始化 Canvas（现在 canvas 是可见的，getBoundingClientRect 返回正确值）
             this.initCanvas();
 
-            // 显示 Canvas 用于预览
-            this.rankingContainer.classList.add('playing');
+            // 确保 DOM 背景与透明度同步
+            if (typeof this._ensureDomBackgroundVisibility === 'function') {
+                this._ensureDomBackgroundVisibility();
+            } else {
+                if (this.rankingBgImageEl) {
+                    if (this.bgImageObj && this.bgImageUrl) {
+                        this.rankingBgImageEl.src = this.bgImageUrl;
+                        this.rankingBgImageEl.style.opacity = String(this.bgOpacity || 1);
+                        this.rankingBgImageEl.style.display = (this.bgOpacity > 0) ? 'block' : 'none';
+                    } else {
+                        this.rankingBgImageEl.style.display = 'none';
+                        this.rankingBgImageEl.src = '';
+                    }
+                }
+            }
 
             // 准备动画数据
             this.prepareAnimationData();
@@ -355,11 +426,15 @@ class DynamicRanking {
 
             // 结束后移除 playing
             this.rankingContainer.classList.remove('playing');
+
+            // 恢复容器之前的内联样式
+            this.unlockContainerSize();
         } catch (err) {
             console.error('preview failed', err);
             this.showError('预览失败: ' + err.message);
             this.isPreview = false;
             this.rankingContainer.classList.remove('playing');
+            this.unlockContainerSize();
         }
     }
 
@@ -516,11 +591,33 @@ class DynamicRanking {
             this.title = this.titleInput.value.trim() || '排行榜';
             this.rankingTitle.textContent = this.title;
 
-            // 初始化 Canvas
+            // 先将容器置为 playing 状态以确保 canvas 可见并可正确测量尺寸
+            this.rankingContainer.classList.add('playing');
+
+            // 锁定当前容器尺寸，避免播放/录制时被 layout 改变
+            this.lockContainerSize();
+
+            // 初始化 Canvas（此时 canvas 可见）
             this.initCanvas();
 
+            // 确保 DOM 背景与透明度同步
+            if (typeof this._ensureDomBackgroundVisibility === 'function') {
+                this._ensureDomBackgroundVisibility();
+            } else {
+                if (this.rankingBgImageEl) {
+                    if (this.bgImageObj && this.bgImageUrl) {
+                        this.rankingBgImageEl.src = this.bgImageUrl;
+                        this.rankingBgImageEl.style.opacity = String(this.bgOpacity || 1);
+                        this.rankingBgImageEl.style.display = (this.bgOpacity > 0) ? 'block' : 'none';
+                    } else {
+                        this.rankingBgImageEl.style.display = 'none';
+                        this.rankingBgImageEl.src = '';
+                    }
+                }
+            }
+
             // 在播放动画时也显示 Canvas（非录制时可预览烟花）
-            this.rankingContainer.classList.add('playing');
+            // (已经设置 playing above)
 
             // 准备动画数据
             this.prepareAnimationData();
@@ -537,6 +634,9 @@ class DynamicRanking {
             // 动画完成后移除 playing 状态
             this.rankingContainer.classList.remove('playing');
 
+            // 恢复容器之前的内联样式
+            this.unlockContainerSize();
+
             this.log('动画运行完成');
         } catch (error) {
             console.error('运行动画错误:', error);
@@ -552,13 +652,73 @@ class DynamicRanking {
      * 初始化 Canvas
      */
     initCanvas() {
+        // 取容器尺寸并设置 canvas 的像素尺寸（考虑 DPR）
         const rect = this.rankingContainer.getBoundingClientRect();
-        this.canvas.width = rect.width * 2; // 2x scale for HD
-        this.canvas.height = rect.height * 2;
+        // Guard: 若元素尚不可见，则 rect 可能为 0，0；尝试 fallback
+        const width = rect.width || this.rankingContainer.clientWidth || 360;
+        const height = rect.height || this.rankingContainer.clientHeight || 640;
+        this.canvasWidth = width;
+        this.canvasHeight = height;
+
+        // 使用设备像素比（devicePixelRatio）而不是固定 2x，提高兼容性
+        const dpr = Math.max(window.devicePixelRatio || 1, 1);
+
+        // 设置画布像素尺寸
+        this.canvas.width = Math.round(this.canvasWidth * dpr);
+        this.canvas.height = Math.round(this.canvasHeight * dpr);
+
+        // 设置 CSS 尺寸，确保 canvas 在布局中不被拉伸
+        this.canvas.style.width = this.canvasWidth + 'px';
+        this.canvas.style.height = this.canvasHeight + 'px';
+
+        // 初始化 2D 上下文并应用缩放
         this.ctx = this.canvas.getContext('2d');
-        this.ctx.scale(2, 2);
-        this.canvasWidth = rect.width;
-        this.canvasHeight = rect.height;
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0); // reset any transforms
+        this.ctx.scale(dpr, dpr);
+    }
+
+    // 锁定排行容器的当前 CSS 尺寸，避免在切换到播放/录制时被 layout 改变
+    lockContainerSize() {
+        try {
+            if (!this.rankingContainer) return;
+            // 如果已经锁定，则忽略
+            if (this._containerLocked) return;
+            const rect = this.rankingContainer.getBoundingClientRect();
+            // 保存原有内联样式以便恢复
+            this._prevInlineWidth = this.rankingContainer.style.width || '';
+            this._prevInlineHeight = this.rankingContainer.style.height || '';
+            this._prevInlineFlex = this.rankingContainer.style.flex || '';
+            this._prevInlineMaxHeight = this.rankingContainer.style.maxHeight || '';
+
+            // 应用像素锁定
+            this.rankingContainer.style.width = Math.round(rect.width) + 'px';
+            this.rankingContainer.style.height = Math.round(rect.height) + 'px';
+            // 防止 flex 收缩
+            this.rankingContainer.style.flex = '0 0 ' + Math.round(rect.width) + 'px';
+            this.rankingContainer.style.maxHeight = Math.round(rect.height) + 'px';
+            this._containerLocked = true;
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    // 恢复容器之前的内联样式
+    unlockContainerSize() {
+        try {
+            if (!this.rankingContainer) return;
+            if (!this._containerLocked) return;
+            this.rankingContainer.style.width = this._prevInlineWidth || '';
+            this.rankingContainer.style.height = this._prevInlineHeight || '';
+            this.rankingContainer.style.flex = this._prevInlineFlex || '';
+            this.rankingContainer.style.maxHeight = this._prevInlineMaxHeight || '';
+            this._containerLocked = false;
+            this._prevInlineWidth = undefined;
+            this._prevInlineHeight = undefined;
+            this._prevInlineFlex = undefined;
+            this._prevInlineMaxHeight = undefined;
+        } catch (e) {
+            // ignore
+        }
     }
 
     /**
@@ -835,12 +995,72 @@ class DynamicRanking {
      * 清空 Canvas
      */
     clearCanvas() {
-        // 绘制背景
+        if (!this.ctx) return;
+
+        // 先绘制背景图（如果已加载）
+        if (this.bgImageObj) {
+            this.ctx.save();
+            this.ctx.globalAlpha = this.bgOpacity;
+            try {
+                const img = this.bgImageObj;
+                const imgW = img.naturalWidth || img.width;
+                const imgH = img.naturalHeight || img.height;
+
+                // Use pixel buffer dimensions to draw (avoid issues with ctx scaling)
+                const dpr = Math.max(window.devicePixelRatio || 1, 1);
+                const destPixelW = Math.round(this.canvasWidth * dpr);
+                const destPixelH = Math.round(this.canvasHeight * dpr);
+
+                if (imgW > 0 && imgH > 0 && destPixelW > 0 && destPixelH > 0) {
+                    // compute source crop for 'cover' behavior based on aspect ratios (using pixel dims)
+                    const canvasRatio = destPixelW / destPixelH;
+                    const imgRatio = imgW / imgH;
+                    let sx = 0, sy = 0, sWidth = imgW, sHeight = imgH;
+
+                    if (imgRatio > canvasRatio) {
+                        // image wider -> crop horizontally
+                        sHeight = imgH;
+                        sWidth = Math.round(imgH * canvasRatio);
+                        sx = Math.round((imgW - sWidth) / 2);
+                        sy = 0;
+                    } else {
+                        // image taller -> crop vertically
+                        sWidth = imgW;
+                        sHeight = Math.round(imgW / canvasRatio);
+                        sx = 0;
+                        sy = Math.round((imgH - sHeight) / 2);
+                    }
+
+                    // Reset transform to draw in pixel space, then restore scaling
+                    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+                    // Draw into full pixel buffer
+                    this.ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, destPixelW, destPixelH);
+                    // Restore scaling to CSS pixel space for further drawing
+                    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+                    this.ctx.scale(dpr, dpr);
+                } else {
+                    // fallback: draw stretched using CSS pixels
+                    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+                    this.ctx.drawImage(img, 0, 0, Math.round(this.canvasWidth * dpr), Math.round(this.canvasHeight * dpr));
+                    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+                    this.ctx.scale(dpr, dpr);
+                }
+            } catch (e) {
+                console.warn('绘制背景图失败，使用渐变背景', e);
+            }
+            this.ctx.restore();
+        }
+
+        // 原有的渐变覆盖（保留，让文字对比更好，如果不想要可改进为根据透明度决定覆盖强度）
         const gradient = this.ctx.createLinearGradient(0, 0, this.canvasWidth, this.canvasHeight);
         gradient.addColorStop(0, '#1a202c');
         gradient.addColorStop(1, '#2d3748');
         this.ctx.fillStyle = gradient;
+        // 如果用户设置了背景并且不想覆盖太强，可以结合 bgOpacity 调整遮罩透明度
+        this.ctx.globalAlpha = this.bgImageObj ? Math.max(0.15, 0.55 - this.bgOpacity * 0.5) : 1.0;
         this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+        // 恢复默认 alpha
+        this.ctx.globalAlpha = 1;
     }
 
     /**
@@ -1446,6 +1666,74 @@ class DynamicRanking {
         const b = parseInt(c.substring(4, 6), 16);
         return `rgba(${r},${g},${b},${alpha})`;
     }
+
+    // 新增：加载背景图片文件并准备用于 Canvas 与 DOM 预览
+    loadBackgroundImage(file) {
+        try {
+            // 清理之前的 URL（如果之前使用过 object URL）
+            if (this.bgImageUrl) {
+                try { URL.revokeObjectURL(this.bgImageUrl); } catch (e) { /* ignore */ }
+                this.bgImageUrl = null;
+            }
+
+            this.bgImageFile = file;
+
+            // 使用 FileReader 将图片读取为 data URL，避免 blob/object URL 与跨域报错
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const dataUrl = ev.target.result;
+                    // 创建 Image 并加载 data URL
+                    const img = new Image();
+                    img.onload = () => {
+                        this.bgImageObj = img;
+                        this.bgImageUrl = dataUrl; // 记录 data URL 用于 DOM 预览
+                        if (this.rankingBgImageEl) {
+                            this.rankingBgImageEl.src = this.bgImageUrl;
+                            this.rankingBgImageEl.style.opacity = String(this.bgOpacity || 1);
+                            this.rankingBgImageEl.style.display = (this.bgOpacity > 0) ? 'block' : 'none';
+                        }
+                        console.log('背景图已加载 (dataURL)', file.name);
+                    };
+                    img.onerror = (err) => {
+                        console.error('背景图 Image 加载失败', err);
+                        this.showError('背景图加载失败');
+                        this.bgImageObj = null;
+                        this.bgImageUrl = null;
+                        if (this.rankingBgImageEl) {
+                            this.rankingBgImageEl.src = '';
+                            this.rankingBgImageEl.style.display = 'none';
+                        }
+                    };
+                    img.src = dataUrl;
+                } catch (e) {
+                    console.error('处理 FileReader result 时出错', e);
+                    this.showError('无法处理背景图: ' + (e && e.message ? e.message : e));
+                }
+            };
+            reader.onerror = (err) => {
+                console.error('FileReader 读取背景图失败', err);
+                this.showError('无法读取背景图文件');
+            };
+            reader.readAsDataURL(file);
+        } catch (error) {
+            console.error('loadBackgroundImage error', error);
+            this.showError('无法加载背景图: ' + error.message);
+        }
+    }
+
+    // 在预览或运行开始前，确保 DOM 预览元素的可见性与透明度同步
+    _ensureDomBackgroundVisibility() {
+        if (!this.rankingBgImageEl) return;
+        if (this.bgImageObj && this.bgImageUrl) {
+            this.rankingBgImageEl.src = this.bgImageUrl;
+            this.rankingBgImageEl.style.opacity = String(this.bgOpacity || 1);
+            this.rankingBgImageEl.style.display = (this.bgOpacity > 0) ? 'block' : 'none';
+        } else {
+            this.rankingBgImageEl.style.display = 'none';
+            this.rankingBgImageEl.src = '';
+        }
+    }
 }
 
 // 实例化并初始化应用（在 DOM 完成后）
@@ -1506,3 +1794,16 @@ window.addEventListener('unhandledrejection', (e) => {
     } catch (err) { /* ignore */
     }
 });
+
+// 在页面卸载时清理可能残留的 object URL
+window.addEventListener('beforeunload', () => {
+    try {
+        if (window.dynamicRanking && window.dynamicRanking.bgImageUrl) {
+            try { URL.revokeObjectURL(window.dynamicRanking.bgImageUrl); } catch (e) { /* ignore */ }
+            window.dynamicRanking.bgImageUrl = null;
+        }
+    } catch (e) {
+        // ignore
+    }
+});
+

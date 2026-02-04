@@ -479,6 +479,19 @@ textarea:focus {
     max-height: 100%;
 }
 
+/* 背景图 DOM 预览层样式（用于在非录制/预览模式下展示背景） */
+#ranking-bg-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none; /* 默认隐藏，由 JS 控制显示 */
+    z-index: 0;
+    transition: opacity 300ms ease;
+    pointer-events: none;
+}
+
 /* Canvas 样式 */
 #ranking-canvas {
     position: absolute;
@@ -487,6 +500,7 @@ textarea:focus {
     width: 100%;
     height: 100%;
     display: none; /* 默认隐藏，录制或播放时显示 */
+    z-index: 1; /* canvas 在背景之上 */
 }
 
 .ranking-container.recording #ranking-canvas,
@@ -499,6 +513,11 @@ textarea:focus {
 .ranking-container.playing #ranking-title,
 .ranking-container.playing #ranking-content {
     display: none;
+}
+
+/* 题目与内容层需要更高的 z-index，以便在 DOM 展示模式下覆盖背景 */
+#ranking-title, #ranking-content {
+    z-index: 2;
 }
 
 /* 排行榜标题样式 */
