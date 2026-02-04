@@ -59,6 +59,10 @@
                     <div class="settings-left">
                         <div class="settings-header">基础配置</div>
                         <div class="setting-item stack"><label for="title-input">排行榜标题</label><input type="text" id="title-input" value="十二星座动态排行榜" placeholder="请输入标题"></div>
+                        <div class="setting-item stack">
+                            <label for="title-color-input">标题颜色</label>
+                            <input type="color" id="title-color-input" value="#ffffff" title="选择标题颜色">
+                        </div>
                         <div class="setting-item stack"><label for="animation-type">动画类型</label><select id="animation-type"><option value="squeeze">🎯 挤压式</option><option value="fade">💫 淡入式</option><option value="slide">🚀 横向滑入式</option><option value="scale">🎪 缩放弹跳式</option><option value="flip">🃏 翻转卡片式</option><option value="elevator">🛗 升降机式</option></select></div>
                         <div class="setting-item stack"><label for="animation-duration">条形图间隔时间（秒）</label><input type="number" id="animation-duration" value="0.5" min="0.1" max="2" step="0.1"></div>
                         <div class="setting-item"><label for="fireworks-enable">烟花效果</label><div class="checkbox-group"><input type="checkbox" id="fireworks-enable" checked><label for="fireworks-enable">启用前三名烟花</label></div></div>
@@ -115,7 +119,7 @@
             <!-- 排行榜展示区域 -->
             <div class="ranking-container" id="ranking-container">
                 <!-- 背景图 DOM 预览（仅用于页面预览），由 JS 控制显示/隐藏与透明度 -->
-                <img id="ranking-bg-image" alt="背景图" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none; z-index:0; pointer-events:none;" />
+                <img id="ranking-bg-image" src="" alt="背景图" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none; z-index:0; pointer-events:none;" />
                 <canvas id="ranking-canvas"></canvas>
                 <!-- DOM 版本用于显示（Canvas用于录制） -->
                 <div id="ranking-title" class="ranking-title" style="position: absolute; top: 30px; left: 0; right: 0; text-align: center;"></div>

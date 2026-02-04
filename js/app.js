@@ -26,7 +26,6 @@ class DynamicRanking {
         this.initEventListeners();
 
         // 背景图支持
-        this.bgImageFile = null; // 原始 File 对象
         this.bgImageUrl = null; // Object URL
         this.bgImageObj = null; // HTMLImageElement
         this.bgOpacity = 1; // 0 - 1
@@ -146,6 +145,8 @@ class DynamicRanking {
         this.fileInput = document.getElementById('file-input');
         this.fileInfo = document.getElementById('file-info');
         this.titleInput = document.getElementById('title-input');
+        // 新增：标题颜色选择器
+        this.titleColorInput = document.getElementById('title-color-input');
         this.durationInput = document.getElementById('animation-duration');
         this.animationTypeSelect = document.getElementById('animation-type');
         this.runButton = document.getElementById('run-animation');
@@ -216,6 +217,21 @@ class DynamicRanking {
                     }
                 }
             });
+        }
+
+        // 标题颜色选择监听
+        if (this.titleColorInput) {
+            // initialize default
+            this.titleColor = this.titleColorInput.value || '#ffffff';
+            // apply initial color to DOM title if present
+            if (this.rankingTitle) this.rankingTitle.style.color = this.titleColor;
+            this.titleColorInput.addEventListener('input', (e) => {
+                this.titleColor = e.target.value || '#ffffff';
+                // update DOM title color immediately
+                if (this.rankingTitle) this.rankingTitle.style.color = this.titleColor;
+            });
+        } else {
+            this.titleColor = '#ffffff';
         }
 
         // 控制按钮
@@ -389,6 +405,7 @@ class DynamicRanking {
             // 标题
             this.title = this.titleInput.value.trim() || '排行榜';
             this.rankingTitle.textContent = this.title;
+            if (this.rankingTitle) this.rankingTitle.style.color = this.titleColor;
 
             // 先切换为 playing 状态以确保 canvas 可见，从而正确测量尺寸
             this.rankingContainer.classList.add('playing');
@@ -590,6 +607,7 @@ class DynamicRanking {
             // 设置标题
             this.title = this.titleInput.value.trim() || '排行榜';
             this.rankingTitle.textContent = this.title;
+            if (this.rankingTitle) this.rankingTitle.style.color = this.titleColor;
 
             // 先将容器置为 playing 状态以确保 canvas 可见并可正确测量尺寸
             this.rankingContainer.classList.add('playing');
@@ -1082,7 +1100,9 @@ class DynamicRanking {
         this.ctx.restore();
 
         // 标题文字
-        this.ctx.fillStyle = '#ffffff';
+        // use chosen title color (fallback to white)
+        const titleColor = this.titleColor || '#ffffff';
+        this.ctx.fillStyle = titleColor;
         this.ctx.font = 'bold 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
@@ -1091,6 +1111,9 @@ class DynamicRanking {
         this.ctx.shadowOffsetY = 4;
         this.ctx.fillText(this.title, this.canvasWidth / 2, titleY);
         this.ctx.shadowColor = 'transparent';
+
+        // ensure DOM title color matches
+        if (this.rankingTitle) this.rankingTitle.style.color = this.titleColor || '#ffffff';
     }
 
     /**
@@ -1676,7 +1699,7 @@ class DynamicRanking {
                 this.bgImageUrl = null;
             }
 
-            this.bgImageFile = file;
+            // no longer store raw File reference; we convert to data URL and keep img in bgImageObj/bgImageUrl
 
             // 使用 FileReader 将图片读取为 data URL，避免 blob/object URL 与跨域报错
             const reader = new FileReader();
