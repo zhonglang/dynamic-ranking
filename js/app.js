@@ -43,6 +43,17 @@ class DynamicRanking {
         this.fireworkRockets = []; // 底部发射的火箭列表（每个在空中爆炸为粒子）
         this.fireworkRings = []; // 空中扩展的环形爆炸效果
 
+        // 科技感效果参数
+        this.techEnabled = true; // 是否启用科技感效果
+        this.techParticles = []; // 科技感粒子系统
+        this.digitalRainChars = []; // 数字雨字符
+        this.gridLines = []; // 网格线
+        this.energyParticles = []; // 能量粒子
+        this.starParticles = []; // 星光粒子
+        
+        // 初始化科技感效果
+        this.initTechEffects();
+
         console.log('DynamicRanking initialized:', !!this);
 
         // 在窗口大小变化时，如果预览/播放中需要重新初始化 canvas 尺寸
@@ -62,6 +73,92 @@ class DynamicRanking {
     // 调试日志
     log(message) {
         console.log(`[DynamicRanking] ${message}`);
+    }
+
+    /**
+     * 初始化科技感效果
+     */
+    initTechEffects() {
+        if (!this.techEnabled) return;
+        
+        // 初始化数字雨字符
+        this.initDigitalRain();
+        
+        // 初始化网格线
+        this.initGridLines();
+        
+        // 初始化星光粒子
+        this.initStarParticles();
+    }
+
+    /**
+     * 初始化数字雨效果
+     */
+    initDigitalRain() {
+        this.digitalRainChars = [];
+        const columns = Math.floor(this.canvasWidth / 20); // 每20像素一列
+        
+        for (let i = 0; i < columns; i++) {
+            const x = i * 20 + Math.random() * 10;
+            const speed = 1 + Math.random() * 3;
+            const length = 5 + Math.floor(Math.random() * 15);
+            const chars = [];
+            
+            for (let j = 0; j < length; j++) {
+                chars.push({
+                    char: Math.floor(Math.random() * 10).toString(), // 0-9的数字
+                    y: -j * 20 - Math.random() * 100,
+                    brightness: 0.2 + (j / length) * 0.8
+                });
+            }
+            
+            this.digitalRainChars.push({ x, speed, chars });
+        }
+    }
+
+    /**
+     * 初始化网格线
+     */
+    initGridLines() {
+        this.gridLines = [];
+        const gridSize = 40;
+        
+        // 水平线
+        for (let y = 0; y < this.canvasHeight; y += gridSize) {
+            this.gridLines.push({
+                type: 'horizontal',
+                y: y,
+                opacity: 0.1
+            });
+        }
+        
+        // 垂直线
+        for (let x = 0; x < this.canvasWidth; x += gridSize) {
+            this.gridLines.push({
+                type: 'vertical',
+                x: x,
+                opacity: 0.1
+            });
+        }
+    }
+
+    /**
+     * 初始化星光粒子
+     */
+    initStarParticles() {
+        this.starParticles = [];
+        const starCount = 50;
+        
+        for (let i = 0; i < starCount; i++) {
+            this.starParticles.push({
+                x: Math.random() * this.canvasWidth,
+                y: Math.random() * this.canvasHeight,
+                size: 0.5 + Math.random() * 2,
+                brightness: 0.3 + Math.random() * 0.7,
+                twinkleSpeed: 0.5 + Math.random() * 2,
+                twinkleOffset: Math.random() * Math.PI * 2
+            });
+        }
     }
 
     /**
@@ -722,6 +819,9 @@ class DynamicRanking {
         this.ctx = this.canvas.getContext('2d');
         this.ctx.setTransform(1, 0, 0, 1, 0, 0); // reset any transforms
         this.ctx.scale(dpr, dpr);
+
+        // 重新初始化科技感效果（需要Canvas尺寸）
+        this.initTechEffects();
     }
 
     // 锁定排行容器的当前 CSS 尺寸，避免在切换到播放/录制时被 layout 改变
@@ -908,8 +1008,120 @@ class DynamicRanking {
         this.ctx.globalCompositeOperation = 'screen';
         this.ctx.fillStyle = `rgba(0, 255, 255, ${scanLineOpacity})`;
         this.ctx.fillRect(0, scanLineY, this.canvasWidth, 2);
-        this.ctx.restore();
-    }
+         this.ctx.restore();
+     }
+
+     /**
+      * 绘制科技感背景效果
+      */
+     drawTechBackground(currentTime) {
+         if (!this.ctx || !this.techEnabled) return;
+
+         // 绘制数字雨效果
+         this.drawDigitalRain(currentTime);
+         
+         // 绘制网格线
+         this.drawGridLines(currentTime);
+         
+         // 绘制星光粒子
+         this.drawStarParticles(currentTime);
+     }
+
+     /**
+      * 绘制数字雨效果
+      */
+     drawDigitalRain(currentTime) {
+         this.ctx.save();
+         this.ctx.font = '16px monospace';
+         this.ctx.textAlign = 'center';
+         
+         this.digitalRainChars.forEach(column => {
+             column.chars.forEach(char => {
+                 // 更新位置
+                 char.y += column.speed;
+                 if (char.y > this.canvasHeight) {
+                     char.y = -20;
+                     char.char = Math.floor(Math.random() * 10).toString();
+                 }
+                 
+                 // 绘制字符
+                 const opacity = char.brightness * 0.6;
+                 this.ctx.fillStyle = `rgba(0, 255, 255, ${opacity})`;
+                 this.ctx.fillText(char.char, column.x, char.y);
+             });
+         });
+         
+         this.ctx.restore();
+     }
+
+     /**
+      * 绘制网格线
+      */
+     drawGridLines(currentTime) {
+         this.ctx.save();
+         this.ctx.strokeStyle = 'rgba(0, 255, 255, 0.15)';
+         this.ctx.lineWidth = 0.5;
+         
+         this.gridLines.forEach(line => {
+             if (line.type === 'horizontal') {
+                 this.ctx.beginPath();
+                 this.ctx.moveTo(0, line.y);
+                 this.ctx.lineTo(this.canvasWidth, line.y);
+                 this.ctx.stroke();
+             } else {
+                 this.ctx.beginPath();
+                 this.ctx.moveTo(line.x, 0);
+                 this.ctx.lineTo(line.x, this.canvasHeight);
+                 this.ctx.stroke();
+             }
+         });
+         
+         this.ctx.restore();
+     }
+
+     /**
+      * 绘制星光粒子
+      */
+     drawStarParticles(currentTime) {
+         this.ctx.save();
+         
+         this.starParticles.forEach(star => {
+             // 闪烁效果
+             const twinkle = Math.sin(currentTime * 0.001 * star.twinkleSpeed + star.twinkleOffset) * 0.5 + 0.5;
+             const brightness = star.brightness * twinkle;
+             
+             this.ctx.fillStyle = `rgba(255, 255, 255, ${brightness * 0.8})`;
+             this.ctx.beginPath();
+             this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+             this.ctx.fill();
+         });
+         
+         this.ctx.restore();
+     }
+
+     /**
+      * 绘制科技感条形图效果
+      */
+     drawTechBar(item, x, y, width, height, currentTime) {
+         if (!this.ctx) return;
+
+         // 条形图发光边框
+         this.ctx.save();
+         
+         // 外发光效果
+         const glowIntensity = Math.sin(currentTime * 0.005) * 0.3 + 0.7;
+         const glowGradient = this.ctx.createLinearGradient(x, y, x + width, y);
+         
+         glowGradient.addColorStop(0, `rgba(0, 255, 255, ${0.3 * glowIntensity})`);
+         glowGradient.addColorStop(0.5, `rgba(64, 156, 255, ${0.5 * glowIntensity})`);
+         glowGradient.addColorStop(1, `rgba(0, 255, 255, ${0.3 * glowIntensity})`);
+         
+         this.ctx.strokeStyle = glowGradient;
+         this.ctx.lineWidth = 3;
+         this.ctx.strokeRect(x - 2, y - 2, width + 4, height + 4);
+         
+         this.ctx.restore();
+     }
 
     /**
      * 在 Canvas 上运行动画
@@ -929,6 +1141,9 @@ class DynamicRanking {
 
                 // 清空 Canvas
                 this.clearCanvas();
+
+                // 绘制科技感背景效果（在标题和条形图之前）
+                this.drawTechBackground(currentTime);
 
                 // 绘制标题
                 this.drawTitle();
@@ -960,12 +1175,12 @@ class DynamicRanking {
                 if (this.animationType === 'squeeze') {
                     // 挤压式：反向绘制（先弹出的在下面）
                     for (let i = this.animationItems.length - 1; i >= 0; i--) {
-                        this.drawItem(this.animationItems[i]);
+                        this.drawItem(this.animationItems[i], currentTime);
                     }
                 } else {
                     // 其他动画类型：正向绘制
                     for (let i = 0; i < this.animationItems.length; i++) {
-                        this.drawItem(this.animationItems[i]);
+                        this.drawItem(this.animationItems[i], currentTime);
                     }
                 }
 
@@ -1239,7 +1454,7 @@ class DynamicRanking {
     /**
      * 绘制单个项目
      */
-    drawItem(item) {
+    drawItem(item, currentTime) {
         if (!item.animate || item.opacity <= 0) return;
 
         const startY = 140;
@@ -1421,6 +1636,9 @@ class DynamicRanking {
             x: 20 + barWidth / 2,
             y: y + itemHeight / 2
         };
+
+        // 绘制科技感条形图效果
+        this.drawTechBar(item, 20, y, barWidth, itemHeight, currentTime);
 
         this.ctx.restore();
     }
