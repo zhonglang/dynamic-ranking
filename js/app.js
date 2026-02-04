@@ -543,10 +543,27 @@ class DynamicRanking {
      * 生成随机颜色（每次运行都不一样）
      */
     generateRandomColor() {
-        // 完全随机的 HSL 颜色
+        // 使用更丰富的颜色生成算法
         const hue = Math.floor(Math.random() * 360);
-        const saturation = 70 + Math.floor(Math.random() * 20); // 70-90% 饱和度
-        const lightness = 50 + Math.floor(Math.random() * 15); // 50-65% 亮度
+        
+        // 根据色相选择不同的饱和度和亮度范围，让颜色更协调
+        let saturation, lightness;
+        
+        // 暖色调（红、橙、黄）：高饱和度，中等亮度
+        if (hue >= 0 && hue < 60) {
+            saturation = 80 + Math.floor(Math.random() * 15); // 80-95%
+            lightness = 55 + Math.floor(Math.random() * 10); // 55-65%
+        }
+        // 冷色调（绿、蓝、紫）：中等饱和度，较高亮度
+        else if (hue >= 60 && hue < 240) {
+            saturation = 70 + Math.floor(Math.random() * 20); // 70-90%
+            lightness = 60 + Math.floor(Math.random() * 15); // 60-75%
+        }
+        // 暖色调（紫红、红）：高饱和度，中等亮度
+        else {
+            saturation = 75 + Math.floor(Math.random() * 20); // 75-95%
+            lightness = 50 + Math.floor(Math.random() * 15); // 50-65%
+        }
 
         return {
             hsl: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
@@ -567,6 +584,18 @@ class DynamicRanking {
             if (this.data.length === 0) {
                 return;
             }
+
+            // 在每次运行前彻底重置录制状态
+            if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+                console.warn('检测到正在运行的录制，先停止它');
+                this.stopRecording();
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            
+            // 重置录制相关状态
+            this.recordedChunks = [];
+            this.recordedBlob = null;
+            this.mediaRecorder = null;
 
             // 更新间隔时间和动画类型
             this.updateIntervalDuration();
@@ -800,6 +829,89 @@ class DynamicRanking {
     }
 
     /**
+     * 绘制呼吸灯效果：全局背景光晕
+     */
+    drawBreathingEffect(currentTime) {
+        if (!this.ctx) return;
+
+        // 呼吸灯周期：2秒一个完整循环（更快更明显）
+        const breathingCycle = 2000; // 2秒
+        const breathingProgress = (currentTime % breathingCycle) / breathingCycle;
+        
+        // 使用正弦函数创建明显的呼吸效果，范围从 0.4 到 1.0
+        const breathingIntensity = Math.sin(breathingProgress * Math.PI * 2) * 0.3 + 0.7; // 0.4 到 1.0
+
+        // 创建中心光晕效果
+        const centerX = this.canvasWidth / 2;
+        const centerY = this.canvasHeight / 2;
+        const maxRadius = Math.max(this.canvasWidth, this.canvasHeight) * 0.8;
+        
+        // 主光晕：中心蓝色光晕
+        const mainGlowGradient = this.ctx.createRadialGradient(
+            centerX, centerY, 0,
+            centerX, centerY, maxRadius
+        );
+        
+        // 增强光晕强度，让效果更明显
+        const mainOpacity = 0.4 * breathingIntensity;
+        
+        mainGlowGradient.addColorStop(0, `rgba(64, 156, 255, ${mainOpacity * 0.8})`);
+        mainGlowGradient.addColorStop(0.3, `rgba(32, 128, 255, ${mainOpacity * 0.6})`);
+        mainGlowGradient.addColorStop(0.6, `rgba(16, 96, 255, ${mainOpacity * 0.3})`);
+        mainGlowGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        // 绘制主光晕
+        this.ctx.save();
+        this.ctx.globalCompositeOperation = 'screen';
+        this.ctx.fillStyle = mainGlowGradient;
+        this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+        this.ctx.restore();
+
+        // 添加白色高光光晕
+        const highlightGlowGradient = this.ctx.createRadialGradient(
+            centerX, centerY, 0,
+            centerX, centerY, maxRadius * 0.5
+        );
+        
+        const highlightOpacity = 0.25 * breathingIntensity;
+        
+        highlightGlowGradient.addColorStop(0, `rgba(255, 255, 255, ${highlightOpacity * 0.6})`);
+        highlightGlowGradient.addColorStop(0.5, `rgba(200, 220, 255, ${highlightOpacity * 0.3})`);
+        highlightGlowGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        this.ctx.save();
+        this.ctx.globalCompositeOperation = 'overlay';
+        this.ctx.fillStyle = highlightGlowGradient;
+        this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+        this.ctx.restore();
+
+        // 添加边缘科技光晕效果
+        const edgeGlowGradient = this.ctx.createLinearGradient(0, 0, this.canvasWidth, this.canvasHeight);
+        const edgeOpacity = 0.15 * breathingIntensity;
+        
+        edgeGlowGradient.addColorStop(0, `rgba(0, 255, 255, ${edgeOpacity * 0.8})`);
+        edgeGlowGradient.addColorStop(0.3, `rgba(128, 0, 255, ${edgeOpacity * 0.6})`);
+        edgeGlowGradient.addColorStop(0.7, `rgba(255, 0, 128, ${edgeOpacity * 0.4})`);
+        edgeGlowGradient.addColorStop(1, `rgba(0, 255, 255, ${edgeOpacity * 0.2})`);
+
+        this.ctx.save();
+        this.ctx.globalCompositeOperation = 'soft-light';
+        this.ctx.fillStyle = edgeGlowGradient;
+        this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+        this.ctx.restore();
+
+        // 添加扫描线效果（科技感）
+        const scanLineOpacity = 0.1 * breathingIntensity;
+        const scanLineY = (currentTime % 4000) / 4000 * this.canvasHeight;
+        
+        this.ctx.save();
+        this.ctx.globalCompositeOperation = 'screen';
+        this.ctx.fillStyle = `rgba(0, 255, 255, ${scanLineOpacity})`;
+        this.ctx.fillRect(0, scanLineY, this.canvasWidth, 2);
+        this.ctx.restore();
+    }
+
+    /**
      * 在 Canvas 上运行动画
      */
     async runCanvasAnimation() {
@@ -856,6 +968,9 @@ class DynamicRanking {
                         this.drawItem(this.animationItems[i]);
                     }
                 }
+
+                // 添加呼吸灯效果：全局背景光晕
+                this.drawBreathingEffect(currentTime);
 
                 // 新增：触发烟花逻辑改为在第1~第3名播放期间触发，并在三名全部完成后停止
                 try {
@@ -1015,69 +1130,74 @@ class DynamicRanking {
     clearCanvas() {
         if (!this.ctx) return;
 
+        // 保存当前变换状态
+        this.ctx.save();
+        
+        // 重置变换到像素空间，绘制背景
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+
         // 先绘制背景图（如果已加载）
         if (this.bgImageObj) {
-            this.ctx.save();
-            this.ctx.globalAlpha = this.bgOpacity;
             try {
                 const img = this.bgImageObj;
                 const imgW = img.naturalWidth || img.width;
                 const imgH = img.naturalHeight || img.height;
 
-                // Use pixel buffer dimensions to draw (avoid issues with ctx scaling)
+                // 使用设备像素比
                 const dpr = Math.max(window.devicePixelRatio || 1, 1);
                 const destPixelW = Math.round(this.canvasWidth * dpr);
                 const destPixelH = Math.round(this.canvasHeight * dpr);
 
                 if (imgW > 0 && imgH > 0 && destPixelW > 0 && destPixelH > 0) {
-                    // compute source crop for 'cover' behavior based on aspect ratios (using pixel dims)
+                    // 计算裁剪区域，实现 cover 效果
                     const canvasRatio = destPixelW / destPixelH;
                     const imgRatio = imgW / imgH;
                     let sx = 0, sy = 0, sWidth = imgW, sHeight = imgH;
 
                     if (imgRatio > canvasRatio) {
-                        // image wider -> crop horizontally
+                        // 图片更宽 -> 水平裁剪
                         sHeight = imgH;
                         sWidth = Math.round(imgH * canvasRatio);
                         sx = Math.round((imgW - sWidth) / 2);
                         sy = 0;
                     } else {
-                        // image taller -> crop vertically
+                        // 图片更高 -> 垂直裁剪
                         sWidth = imgW;
                         sHeight = Math.round(imgW / canvasRatio);
                         sx = 0;
                         sy = Math.round((imgH - sHeight) / 2);
                     }
 
-                    // Reset transform to draw in pixel space, then restore scaling
-                    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-                    // Draw into full pixel buffer
+                    // 绘制背景图到整个像素缓冲区
+                    this.ctx.globalAlpha = this.bgOpacity;
                     this.ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, destPixelW, destPixelH);
-                    // Restore scaling to CSS pixel space for further drawing
-                    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-                    this.ctx.scale(dpr, dpr);
+                    this.ctx.globalAlpha = 1;
                 } else {
-                    // fallback: draw stretched using CSS pixels
-                    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-                    this.ctx.drawImage(img, 0, 0, Math.round(this.canvasWidth * dpr), Math.round(this.canvasHeight * dpr));
-                    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-                    this.ctx.scale(dpr, dpr);
+                    // 备用方案：直接拉伸绘制
+                    this.ctx.globalAlpha = this.bgOpacity;
+                    this.ctx.drawImage(img, 0, 0, destPixelW, destPixelH);
+                    this.ctx.globalAlpha = 1;
                 }
             } catch (e) {
                 console.warn('绘制背景图失败，使用渐变背景', e);
             }
-            this.ctx.restore();
         }
 
-        // 原有的渐变覆盖（保留，让文字对比更好，如果不想要可改进为根据透明度决定覆盖强度）
+        // 恢复原来的变换状态（CSS像素空间）
+        this.ctx.restore();
+
+        // 绘制半透明覆盖层，增强文字可读性
         const gradient = this.ctx.createLinearGradient(0, 0, this.canvasWidth, this.canvasHeight);
         gradient.addColorStop(0, '#1a202c');
         gradient.addColorStop(1, '#2d3748');
         this.ctx.fillStyle = gradient;
-        // 如果用户设置了背景并且不想覆盖太强，可以结合 bgOpacity 调整遮罩透明度
-        this.ctx.globalAlpha = this.bgImageObj ? Math.max(0.15, 0.55 - this.bgOpacity * 0.5) : 1.0;
+        
+        // 根据背景图透明度调整覆盖层透明度
+        const overlayAlpha = this.bgImageObj ? Math.max(0.15, 0.55 - this.bgOpacity * 0.5) : 0.8;
+        this.ctx.globalAlpha = overlayAlpha;
         this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
-        // 恢复默认 alpha
+        
+        // 恢复默认透明度
         this.ctx.globalAlpha = 1;
     }
 
@@ -1223,38 +1343,46 @@ class DynamicRanking {
         const maxBarWidth = this.canvasWidth - 40;
         const barWidth = (item.percentage / 100) * maxBarWidth;
 
-        // 前三名特殊颜色
-        let barColor;
+        // 为所有项目创建更丰富的渐变色
+        let barGradient;
         let textColor = '#ffffff';
+        
         if (item.displayRank === 1) {
-            barColor = ['#FFD700', '#FFA500'];
+            // 金牌：金色渐变
+            barGradient = this.ctx.createLinearGradient(20, y, 20 + barWidth, y);
+            barGradient.addColorStop(0, '#FFD700');
+            barGradient.addColorStop(0.5, '#FFA500');
+            barGradient.addColorStop(1, '#FF8C00');
         } else if (item.displayRank === 2) {
-            barColor = ['#C0C0C0', '#808080'];
+            // 银牌：银色渐变
+            barGradient = this.ctx.createLinearGradient(20, y, 20 + barWidth, y);
+            barGradient.addColorStop(0, '#E6E6FA');
+            barGradient.addColorStop(0.5, '#C0C0C0');
+            barGradient.addColorStop(1, '#808080');
         } else if (item.displayRank === 3) {
-            barColor = ['#CD7F32', '#8B4513'];
+            // 铜牌：铜色渐变
+            barGradient = this.ctx.createLinearGradient(20, y, 20 + barWidth, y);
+            barGradient.addColorStop(0, '#CD7F32');
+            barGradient.addColorStop(0.5, '#8B4513');
+            barGradient.addColorStop(1, '#654321');
         } else {
-            barColor = [item.color.hsl, `hsla(${item.color.h}, ${item.color.s}%, ${item.color.l - 10}%, ${item.opacity})`];
+            // 其他排名：基于随机颜色的丰富渐变
+            const baseHue = item.color.h;
+            const baseSaturation = item.color.s;
+            const baseLightness = item.color.l;
+            
+            barGradient = this.ctx.createLinearGradient(20, y, 20 + barWidth, y);
+            barGradient.addColorStop(0, `hsl(${baseHue}, ${baseSaturation}%, ${baseLightness + 10}%)`);
+            barGradient.addColorStop(0.5, `hsl(${baseHue}, ${baseSaturation}%, ${baseLightness}%)`);
+            barGradient.addColorStop(1, `hsl(${baseHue}, ${baseSaturation}%, ${baseLightness - 15}%)`);
         }
 
         // 绘制条形图背景
         this.ctx.save();
         this.ctx.beginPath();
         this.ctx.roundRect(20, y, barWidth, itemHeight, 15);
-        this.ctx.fillStyle = barColor[0];
-        this.ctx.fill();
-
-        if (item.displayRank > 3) {
-            const gradient = this.ctx.createLinearGradient(20, y, 20 + barWidth, y);
-            gradient.addColorStop(0, barColor[0]);
-            gradient.addColorStop(1, barColor[1]);
-            this.ctx.fillStyle = gradient;
-            this.ctx.globalAlpha = drawOpacity;
-        } else {
-            const gradient = this.ctx.createLinearGradient(20, y, 20 + barWidth, y);
-            gradient.addColorStop(0, barColor[0]);
-            gradient.addColorStop(1, barColor[1]);
-            this.ctx.fillStyle = gradient;
-        }
+        this.ctx.fillStyle = barGradient;
+        this.ctx.globalAlpha = drawOpacity;
         this.ctx.fill();
         this.ctx.restore();
 
@@ -1302,6 +1430,14 @@ class DynamicRanking {
      */
     async startRecording() {
         try {
+            // 安全检查：确保没有正在运行的录制
+            if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+                console.warn('检测到正在运行的录制，先停止它');
+                this.stopRecording();
+                // 等待一小段时间确保录制完全停止
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
             this.recordingStatus.style.display = 'flex';
             this.rankingContainer.classList.add('recording');
 
@@ -1366,8 +1502,17 @@ class DynamicRanking {
         if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
             this.isRecording = false;
             this.mediaRecorder.stop();
+            
+            // 清理 MediaRecorder 资源
+            if (this.mediaRecorder.stream) {
+                this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+            
             this.log('停止录制');
         }
+        
+        // 重置 MediaRecorder 引用
+        this.mediaRecorder = null;
         this.rankingContainer.classList.remove('recording');
     }
 
