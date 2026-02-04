@@ -65,7 +65,6 @@
                         </div>
                         <div class="setting-item stack"><label for="animation-type">动画类型</label><select id="animation-type"><option value="squeeze">🎯 挤压式</option><option value="fade">💫 淡入式</option><option value="slide">🚀 横向滑入式</option><option value="scale">🎪 缩放弹跳式</option><option value="flip">🃏 翻转卡片式</option><option value="elevator">🛗 升降机式</option></select></div>
                         <div class="setting-item stack"><label for="animation-duration">条形图间隔时间（秒）</label><input type="number" id="animation-duration" value="0.5" min="0.1" max="2" step="0.1"></div>
-                        <div class="setting-item"><label for="fireworks-enable">烟花效果</label><div class="checkbox-group"><input type="checkbox" id="fireworks-enable" checked><label for="fireworks-enable">启用前三名烟花</label></div></div>
 
                         <!-- 新增：背景图上传与透明度控制 -->
                         <div class="setting-item stack">
@@ -82,9 +81,10 @@
                         <div class="advanced-panel">
                             <div class="settings-header">
                                 高级配置
-                                <button id="advanced-toggle" class="advanced-toggle" aria-expanded="false" aria-controls="advanced-content">展开</button>
                             </div>
                             <div id="advanced-content" class="advanced-content">
+                                <!-- 将烟花启用开关放在高级配置内部，位于烟花持续（秒）上方 -->
+                                <div class="setting-item"><label for="fireworks-enable">烟花效果</label><div class="checkbox-group"><input type="checkbox" id="fireworks-enable" checked><label for="fireworks-enable">启用前三名烟花</label></div></div>
                                 <div class="setting-item"><label for="fireworks-duration">烟花持续（秒）</label><input type="number" id="fireworks-duration" value="3" min="0.5" max="10" step="0.5"></div>
                                 <div class="setting-item"><label for="fireworks-density">烟花密度（基数）</label><input type="number" id="fireworks-density" value="10" min="8" max="128" step="1"></div>
                                 <div class="setting-item"><label for="fireworks-trail">尾迹长度</label><input type="number" id="fireworks-trail" value="20" min="4" max="80" step="1"></div>
