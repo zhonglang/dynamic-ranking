@@ -5,10 +5,8 @@
 class DynamicRanking {
     constructor() {
         // 烟花视觉参数（可由 UI 动态调整）
-        this.fireworksTrailLength = 20; // 尾迹采样长度
-        this.fireworksGlow = 0.1; // 光晕强度（0-1）
-        this.fireworksSpeedMul = 1.0; // 碎片速度倍数
-        this.fireworksCoreRatio = 0.06; // 核心亮点占比
+        this.fireworksSpeedMul = 0.8; // 碎片速度倍数（减慢）
+        this.fireworksCoreRatio = 0.04; // 核心亮点占比（减少）
         this.data = [];
         this.intervalDuration = 0.5; // 条形图间隔时间（秒）
         this.flyInDuration = 1000; // 条形图飞入时间（毫秒），默认1秒
@@ -35,11 +33,11 @@ class DynamicRanking {
         this.isPreview = false; // 非录制的预览模式标志
         this.fireworksActive = false;
         this.fireworksStartTime = 0;
-        this.fireworksDuration = 3000; // 毫秒，烟花持续时长（可由 UI 覆盖）
+        this.fireworksDuration = 1500; // 毫秒，烟花持续时长（进一步缩短）
         this.lastFireworkSpawn = 0;
-        this.fireworkSpawnInterval = 400; // 每隔多少ms产生一次烟花
+        this.fireworkSpawnInterval = 1500; // 每隔多少ms产生一次烟花（大幅减少频率）
         this.fireworkParticles = [];
-        this.fireworksDensity = 10; // 粒子密度基数（可由 UI 覆盖）
+        this.fireworksDensity = 3; // 粒子密度基数（极简）
         this.fireworkRockets = []; // 底部发射的火箭列表（每个在空中爆炸为粒子）
         this.fireworkRings = []; // 空中扩展的环形爆炸效果
 
@@ -293,8 +291,6 @@ class DynamicRanking {
         this.fireworksDurationInput = document.getElementById('fireworks-duration');
         this.fireworksDensityInput = document.getElementById('fireworks-density');
         // 新增视觉参数
-        this.fireworksTrailInput = document.getElementById('fireworks-trail');
-        this.fireworksGlowInput = document.getElementById('fireworks-glow');
         this.fireworksSpeedInput = document.getElementById('fireworks-speed');
         this.fireworksCoreRatioInput = document.getElementById('fireworks-core-ratio');
 
@@ -421,18 +417,6 @@ class DynamicRanking {
             });
         }
         // 视觉参数监听
-        if (this.fireworksTrailInput) {
-            this.fireworksTrailInput.addEventListener('change', () => {
-                const v = parseInt(this.fireworksTrailInput.value);
-                if (!isNaN(v) && v >= 4) this.fireworksTrailLength = v;
-            });
-        }
-        if (this.fireworksGlowInput) {
-            this.fireworksGlowInput.addEventListener('change', () => {
-                const v = parseFloat(this.fireworksGlowInput.value);
-                if (!isNaN(v)) this.fireworksGlow = Math.max(0, Math.min(1, v));
-            });
-        }
         if (this.fireworksSpeedInput) {
             this.fireworksSpeedInput.addEventListener('change', () => {
                 const v = parseFloat(this.fireworksSpeedInput.value);
@@ -1247,10 +1231,13 @@ class DynamicRanking {
                     const top3Animating = top3.length > 0 && top3.some(it => it.animate);
                     const top3AllDone = top3.length > 0 && top3.every(it => it.animate && (currentTime - it.startTime >= this.flyInDuration));
 
-                    // 在第1~第3名任一开始弹入时启动烟花（只要用户启用）
+                    // 在第1~第3名任一开始弹入时有概率启动烟花（只要用户启用）
                     // 增加最小启动延迟，避免连续多次运行时立即触发烟花
                     const FIREWORKS_MIN_START_DELAY = 150; // ms
-                    if (top3Animating && this.fireworksEnabled && !this.fireworksActive && (currentTime - this.animationStartTime) > FIREWORKS_MIN_START_DELAY) {
+                    const FIREWORKS_CHANCE = 0.3; // 30%的概率触发烟花
+                    if (top3Animating && this.fireworksEnabled && !this.fireworksActive && 
+                        (currentTime - this.animationStartTime) > FIREWORKS_MIN_START_DELAY &&
+                        Math.random() < FIREWORKS_CHANCE) {
                         this.startFireworks();
                     }
 
@@ -1824,6 +1811,7 @@ class DynamicRanking {
         this.lastFireworkSpawn = 0;
         this.fireworkParticles = [];
         this.fireworkRockets = [];
+        // this.fireworkSmoke = []; // 暂时移除烟雾粒子系统
         this.log('Fireworks (rockets) started');
     }
 
@@ -1837,12 +1825,27 @@ class DynamicRanking {
     spawnRocketTowards(targetX, targetY) {
         const startX = Math.max(40, Math.min(this.canvasWidth - 40, targetX + (Math.random() - 0.5) * 120));
         const startY = this.canvasHeight + 30; // 从画布底部下方发射
-        const vy = -(1.0 + Math.random() * 1.6); // 更迅速
-        const vx = (targetX - startX) / (350 + Math.random() * 300);
-        const life = 600 + Math.random() * 700; // 火箭寿命
-        const targetAltitude = Math.max(60, targetY - (20 + Math.random() * 120)); // 在目标上方一定高度爆炸
-        const color = ['#FFD700', '#FF8C42', '#FF6B6B', '#6BCB77', '#4D96FF'][Math.floor(Math.random() * 5)];
-        // 火箭带一个小的烟雾粒子组，用于发射时的向上烟雾
+        
+        // 抛物线轨迹：更真实的火箭发射
+        const distance = Math.sqrt(Math.pow(targetX - startX, 2) + Math.pow(targetY - startY, 2));
+        const angle = Math.atan2(targetY - startY, targetX - startX);
+        const speed = 0.8 + Math.random() * 0.4; // 更慢更自然的速度
+        
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed;
+        
+        const life = 800 + Math.random() * 800; // 火箭寿命
+        const targetAltitude = Math.max(80, targetY - (40 + Math.random() * 160)); // 在目标上方爆炸
+        
+        // 更丰富的颜色组合
+        const colorSets = [
+            ['#FF6B6B', '#FF8C42', '#FFD700'], // 红橙黄
+            ['#4D96FF', '#6BCB77', '#FFD700'], // 蓝绿黄
+            ['#9D4BFF', '#FF6B6B', '#FF8C42'], // 紫红橙
+            ['#6BCB77', '#4D96FF', '#9D4BFF']  // 绿蓝紫
+        ];
+        const colors = colorSets[Math.floor(Math.random() * colorSets.length)];
+        
         this.fireworkRockets.push({
             x: startX,
             y: startY,
@@ -1851,73 +1854,125 @@ class DynamicRanking {
             age: 0,
             life,
             targetY: targetAltitude,
-            color,
-            smokeTimer: 0
+            colors: colors,
+            smokeTimer: 0,
+            trail: [] // 尾迹记录
         });
     }
 
-    // 爆炸成粒子（增强：核心 + 主体粒子 + 环形扩散 + 次级裂变粒子）
-    spawnExplosion(x, y) {
-        const baseColors = ['#FFD700', '#FF6B6B', '#FF8C42', '#6BCB77', '#4D96FF'];
-        const particleCount = Math.max(16, Math.min(400, Math.round(this.fireworksDensity)));
+    // 爆炸成粒子（更真实的烟花爆炸效果）
+    spawnExplosion(x, y, rocketColors) {
+        const particleCount = Math.max(8, Math.min(50, Math.round(this.fireworksDensity * 0.5))); // 极简粒子数量
+        
+        // 使用火箭的颜色组合，或者随机颜色组合
+        const colors = rocketColors || [
+            ['#FF6B6B', '#FF8C42', '#FFD700'],
+            ['#4D96FF', '#6BCB77', '#FFD700'],
+            ['#9D4BFF', '#FF6B6B', '#FF8C42'],
+            ['#6BCB77', '#4D96FF', '#9D4BFF']
+        ][Math.floor(Math.random() * 4)];
 
-        // 主环（大环光晕）
-        const ringCount = 1 + Math.floor(Math.random() * 3);
+        // 1. 中心爆炸光晕（强烈闪光）
+        this.fireworkRings.push({
+            x, y,
+            radius: 10,
+            maxRadius: 120 + Math.random() * 80,
+            thickness: 8 + Math.random() * 6,
+            age: 0,
+            life: 300 + Math.random() * 200,
+            color: colors && colors.length > 0 ? colors[0] : '#FF6B6B',
+            type: 'flash'
+        });
+
+        // 2. 扩散光晕环（多个环）
+        const ringCount = Math.floor(Math.random() * 2); // 极简光晕环数量（0或1个）
         for (let r = 0; r < ringCount; r++) {
+            const colorIndex = colors && colors.length > 0 ? r % colors.length : 0;
+            const ringColor = colors && colors.length > 0 ? colors[colorIndex] : '#4D96FF';
             this.fireworkRings.push({
-                x,
-                y,
-                radius: 6 + r * 8,
-                maxRadius: 60 + Math.random() * 80,
-                thickness: 3 + Math.random() * 6,
+                x, y,
+                radius: 15 + r * 12,
+                maxRadius: 80 + Math.random() * 100,
+                thickness: 4 + Math.random() * 3,
                 age: 0,
-                life: 420 + Math.random() * 520,
-                color: baseColors[Math.floor(Math.random() * baseColors.length)]
+                life: 500 + Math.random() * 300,
+                color: ringColor,
+                type: 'ring'
             });
         }
 
-        // 生成几颗核心亮点（亮度高、体积大、寿命短）
-        const coreCount = Math.max(1, Math.round(particleCount * (this.fireworksCoreRatio || 0.06)));
+        // 3. 核心亮点（高亮度、大体积）
+        const coreCount = Math.max(1, Math.round(particleCount * 0.03)); // 极简核心亮点数量
         for (let c = 0; c < coreCount; c++) {
             const angle = Math.random() * Math.PI * 2;
-            const speed = (1.2 + Math.random() * 2.2) * this.fireworksSpeedMul;
-            const color = baseColors[Math.floor(Math.random() * baseColors.length)];
+            const speed = (2.0 + Math.random() * 3.0) * this.fireworksSpeedMul;
+            const colorIndex = colors && colors.length > 0 ? Math.floor(Math.random() * colors.length) : 0;
+            const color = colors && colors.length > 0 ? colors[colorIndex] : '#FFD700';
+            
             this.fireworkParticles.push({
                 x, y,
-                vx: Math.cos(angle) * speed * 0.6,
-                vy: Math.sin(angle) * speed * 0.6,
-                life: 380 + Math.random() * 220,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 400 + Math.random() * 300,
                 age: 0,
-                size: 3 + Math.random() * 4,
+                size: 4 + Math.random() * 3,
                 color: color,
                 core: true,
                 trail: [],
-                drag: 0.995
+                drag: 0.98, // 更强的阻力
+                gravity: 0.0005, // 重力效果
+                brightness: 1.0
             });
         }
 
-        // 主体粒子（较多，带颜色渐变）
+        // 4. 主体粒子（向外扩散）
         for (let i = 0; i < particleCount; i++) {
-            const angle = (Math.PI * 2) * (i / particleCount) + (Math.random() - 0.5) * 0.8;
-            const velocity = (0.6 + Math.random() * 4.0) * this.fireworksSpeedMul;
-            const color = baseColors[Math.floor(Math.random() * baseColors.length)];
+            const angle = (Math.PI * 2) * (i / particleCount) + (Math.random() - 0.5) * 1.2;
+            const velocity = (1.5 + Math.random() * 5.0) * this.fireworksSpeedMul;
+            const colorIndex = colors && colors.length > 0 ? Math.floor(Math.random() * colors.length) : 0;
+            const color = colors && colors.length > 0 ? colors[colorIndex] : '#FF8C42';
+            
             this.fireworkParticles.push({
                 x, y,
                 vx: Math.cos(angle) * velocity,
                 vy: Math.sin(angle) * velocity,
-                life: 700 + Math.random() * 1000,
+                life: 800 + Math.random() * 600,
                 age: 0,
-                size: 1 + Math.random() * 2.5,
+                size: 1.5 + Math.random() * 2.0,
                 color: color,
                 core: false,
                 trail: [],
-                drag: 0.995,
-                // 小概率成为会再度裂变的次级炸弹
-                canSplit: Math.random() < 0.12,
-                splitTime: 200 + Math.random() * 400,
-                splitDone: false
+                drag: 0.985,
+                gravity: 0.0008, // 重力效果
+                brightness: 0.7 + Math.random() * 0.3,
+                // 次级爆炸效果
+                canSplit: Math.random() < 0.15,
+                splitTime: 150 + Math.random() * 200,
+                splitDone: false,
+                // 闪烁效果
+                twinkleSpeed: 2 + Math.random() * 3,
+                twinkleOffset: Math.random() * Math.PI * 2
             });
         }
+
+        // 5. 烟雾效果（暂时注释掉，因为烟雾粒子系统未实现）
+        // const smokeCount = Math.max(10, Math.round(particleCount * 0.3));
+        // for (let i = 0; i < smokeCount; i++) {
+        //     const angle = Math.random() * Math.PI * 2;
+        //     const speed = 0.3 + Math.random() * 0.8;
+        //     
+        //     this.fireworkSmoke.push({
+        //         x, y,
+        //         vx: Math.cos(angle) * speed,
+        //         vy: Math.sin(angle) * speed,
+        //         life: 1000 + Math.random() * 800,
+        //         age: 0,
+        //         size: 3 + Math.random() * 4,
+        //         color: '#888888',
+        //         opacity: 0.6 + Math.random() * 0.4,
+        //         expandRate: 1.02 + Math.random() * 0.03
+        //     });
+        // }
     }
 
     updateAndDrawFireworks(currentTime) {
@@ -1932,11 +1987,11 @@ class DynamicRanking {
                 if (now - this.lastFireworkSpawn > this.fireworkSpawnInterval) {
                     const top3 = this.animationItems.filter(it => it.displayRank <= 3 && it._lastDrawPos);
                     if (top3.length > 0) {
-                        // 为前三名分别发射若干火箭（可以更密集）
-                        top3.forEach(posItem => {
-                            // 每次在目标附近发射1 枚火箭
-                            this.spawnRocketTowards(posItem._lastDrawPos.x + (Math.random() - 0.5) * 20, posItem._lastDrawPos.y);
-                        });
+                        // 随机选择前三名中的一个发射火箭，而不是全部发射
+                        const randomIndex = Math.floor(Math.random() * top3.length);
+                        const posItem = top3[randomIndex];
+                        // 每次只发射1枚火箭
+                        this.spawnRocketTowards(posItem._lastDrawPos.x + (Math.random() - 0.5) * 20, posItem._lastDrawPos.y);
                     } else {
                         const rx = 100 + Math.random() * (this.canvasWidth - 200);
                         const ry = 80 + Math.random() * (this.canvasHeight / 2);
@@ -1955,38 +2010,65 @@ class DynamicRanking {
             const r = this.fireworkRockets[i];
             const dt = 16; // ms
             r.age += dt;
-            r.vy += -0.0006 * dt; // 微弱加速（更自然）
-            // 引入空气阻力略微减速横向速度
-            r.vx *= 0.9995;
-            r.vy *= 0.9998;
+            
+            // 更真实的物理效果：重力影响
+            r.vy += 0.0008 * dt; // 重力效果
+            // 空气阻力
+            r.vx *= 0.998;
+            r.vy *= 0.998;
             r.x += r.vx * dt;
             r.y += r.vy * dt;
-            // 绘制火箭（亮点）
+            
+            // 记录尾迹
+            r.trail.unshift({x: r.x, y: r.y, age: r.age});
+            if (r.trail.length > 8) r.trail.pop(); // 极简尾迹长度
+            
+            // 绘制火箭和尾迹
             this.ctx.save();
-            // 使用叠加效果让尾迹更明显
             this.ctx.globalCompositeOperation = 'lighter';
-            // 主亮点
-            this.ctx.fillStyle = r.color || '#fff';
-            this.ctx.beginPath();
-            this.ctx.arc(r.x, r.y, 2.6, 0, Math.PI * 2);
-            this.ctx.fill();
-            // 更长更柔和的尾迹（多次 radial fade）
-            const trailLen = 40 + Math.abs(r.vx) * 120;
-            for (let t = 0; t < 6; t++) {
-                const a = 1 - t / 6;
-                const px = r.x - r.vx * (trailLen * (t / 6));
-                const py = r.y - r.vy * (trailLen * (t / 6));
-                this.ctx.globalAlpha = 0.15 * a;
-                this.ctx.fillStyle = r.color || '#fff';
-                this.ctx.beginPath();
-                this.ctx.arc(px, py, 4 + (6 - t) * 0.6, 0, Math.PI * 2);
-                this.ctx.fill();
+            
+            // 绘制尾迹（烟雾效果）
+            for (let t = 0; t < r.trail.length; t++) {
+                const pt = r.trail[t];
+                const trailAge = r.age - pt.age;
+                const trailAlpha = Math.max(0, Math.min(1, 1 - trailAge / 300));
+                
+                if (trailAlpha > 0) {
+                    const trailOpacity = Math.max(0, Math.min(1, trailAlpha * 0.3));
+                    this.ctx.globalAlpha = trailOpacity;
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.beginPath();
+                    this.ctx.arc(pt.x, pt.y, 2 + (t / r.trail.length) * 4, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
             }
+            
+            // 主火箭亮点
+            const lifeRatio = r.life > 0 ? r.age / r.life : 1;
+            const rocketAlpha = Math.max(0, Math.min(1, 1 - lifeRatio));
+            this.ctx.globalAlpha = rocketAlpha;
+            const rocketColor = (r.colors && r.colors[0]) ? r.colors[0] : '#ffffff';
+            this.ctx.fillStyle = rocketColor;
+            this.ctx.beginPath();
+            this.ctx.arc(r.x, r.y, 3.0, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            // 火箭光晕
+            const glowAlpha = Math.max(0, Math.min(1, rocketAlpha * 0.4));
+            this.ctx.globalAlpha = glowAlpha;
+            const glowGradient = this.ctx.createRadialGradient(r.x, r.y, 0, r.x, r.y, 12);
+            glowGradient.addColorStop(0, this.hexToRgba(rocketColor, 0.8));
+            glowGradient.addColorStop(1, this.hexToRgba(rocketColor, 0));
+            this.ctx.fillStyle = glowGradient;
+            this.ctx.beginPath();
+            this.ctx.arc(r.x, r.y, 12, 0, Math.PI * 2);
+            this.ctx.fill();
+            
             this.ctx.restore();
 
             // 判断是否爆炸：达到目标高度或寿命用尽
             if (r.y <= r.targetY || r.age >= r.life) {
-                this.spawnExplosion(r.x, r.y);
+                this.spawnExplosion(r.x, r.y, r.colors);
                 this.fireworkRockets.splice(i, 1);
             }
         }
@@ -2027,74 +2109,108 @@ class DynamicRanking {
         }
 
         // 更新并绘制粒子
-        const gravity = 0.0025; // px/ms^2
         for (let i = this.fireworkParticles.length - 1; i >= 0; i--) {
             const p = this.fireworkParticles[i];
             const dt = 16; // ms
 
             p.age += dt;
-            // 物理：速度受重力和阻力影响
-            p.vx *= p.drag || 0.998;
-            p.vy *= p.drag || 0.998;
-            p.vy += gravity * dt * 0.95; // 稍强重力感
+            
+            // 更真实的物理效果：重力和阻力
+            p.vx *= p.drag || 0.985;
+            p.vy *= p.drag || 0.985;
+            p.vy += (p.gravity || 0.0008) * dt; // 重力效果
             p.x += p.vx * dt;
             p.y += p.vy * dt;
-            // 记录轨迹（采样点取决于尾迹长度设置）
+            
+            // 记录轨迹
             if (!p.trail) p.trail = [];
             p.trail.unshift({x: p.x, y: p.y, age: p.age});
-            const maxTrail = p.core ? Math.max(6, Math.round(this.fireworksTrailLength * 0.6)) : Math.max(8, Math.round(this.fireworksTrailLength));
+            const maxTrail = p.core ? 4 : 6; // 极简轨迹长度
             if (p.trail.length > maxTrail) p.trail.pop();
+            
+            // 次级爆炸效果
+            if (p.canSplit && !p.splitDone && p.age >= p.splitTime) {
+                this.spawnExplosion(p.x, p.y, [p.color]);
+                p.splitDone = true;
+            }
+            
+            // 移除过期粒子
+            if (p.age >= p.life) {
+                this.fireworkParticles.splice(i, 1);
+            }
         }
 
         // 绘制粒子（放在 items 之上）
         this.ctx.save();
-        // 更强的混合效果（叠加）让颜色更鲜艳
         this.ctx.globalCompositeOperation = 'lighter';
-        for (const p of this.fireworkParticles) {
-            const alpha = Math.max(0, 1 - p.age / p.life);
-            const size = p.size * (p.core ? 1.4 : 1);
+        
+        // 使用传统的for循环遍历粒子，避免迭代器失效
+        for (let i = 0; i < this.fireworkParticles.length; i++) {
+            const p = this.fireworkParticles[i];
+            // 安全计算透明度，避免NaN
+            const lifeRatio = p.life > 0 ? p.age / p.life : 1;
+            const alpha = Math.max(0, Math.min(1, 1 - lifeRatio));
+            const size = p.size * (p.core ? 1.6 : 1);
+            
+            // 闪烁效果（安全计算）
+            const twinkleSpeed = p.twinkleSpeed || 2;
+            const twinkleOffset = p.twinkleOffset || 0;
+            const twinkle = Math.sin(p.age * 0.001 * twinkleSpeed + twinkleOffset) * 0.3 + 0.7;
+            const brightness = p.brightness || 1;
+            const finalAlpha = Math.max(0, Math.min(1, alpha * brightness * twinkle));
 
-            // 绘制基于轨迹的渐变尾迹（使用线性样式，减少单点 glow）
+            // 绘制轨迹尾迹
             if (p.trail && p.trail.length > 1) {
                 for (let ti = 0; ti < p.trail.length; ti++) {
                     const pt = p.trail[ti];
                     const t = ti / p.trail.length;
-                    const tAlpha = (1 - t) * 0.55 * alpha;
-                    this.ctx.save();
-                    this.ctx.globalAlpha = tAlpha;
-                    // 使用半透明圆并缩放半径以获得渐隐尾迹
-                    const r = Math.max(0.4, size * (1 - t) * 1.1);
-                    this.ctx.fillStyle = p.color;
-                    this.ctx.beginPath();
-                    this.ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
-                    this.ctx.fill();
-                    this.ctx.restore();
+                    const trailAlpha = Math.max(0, Math.min(1, (1 - t) * 0.4 * finalAlpha));
+                    
+                    if (trailAlpha > 0) {
+                        this.ctx.save();
+                        this.ctx.globalAlpha = trailAlpha;
+                        const trailSize = Math.max(0.3, size * (1 - t) * 0.8);
+                        this.ctx.fillStyle = p.color;
+                        this.ctx.beginPath();
+                        this.ctx.arc(pt.x, pt.y, trailSize, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        this.ctx.restore();
+                    }
                 }
             }
 
-            // 粒子主体（较弱的 glow + 径向渐变以控制光晕）
+            // 粒子光晕效果
             this.ctx.save();
             this.ctx.globalCompositeOperation = 'lighter';
-            // 控制光晕：用径向渐变而不是强 shadowBlur
-            const glowStrength = Math.max(0, Math.min(1, this.fireworksGlow));
-            if (glowStrength > 0.02) {
-                const g = this.ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 6);
-                g.addColorStop(0, this.hexToRgba(p.color, 0.55 * glowStrength * alpha));
-                g.addColorStop(0.4, this.hexToRgba(p.color, 0.22 * glowStrength * alpha));
-                g.addColorStop(1, this.hexToRgba(p.color, 0));
-                this.ctx.fillStyle = g;
-                this.ctx.beginPath();
-                this.ctx.arc(p.x, p.y, size * 6, 0, Math.PI * 2);
-                this.ctx.fill();
-            }
-            // 主体
-            this.ctx.globalAlpha = alpha;
+            
+            // 外光晕
+            const glowSize = size * (p.core ? 10 : 6);
+            const glowGradient = this.ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowSize);
+            
+            // 安全计算透明度，避免NaN
+            const stop0Alpha = Math.max(0, Math.min(1, 0.6 * finalAlpha));
+            const stop05Alpha = Math.max(0, Math.min(1, 0.2 * finalAlpha));
+            
+            glowGradient.addColorStop(0, this.hexToRgba(p.color, stop0Alpha));
+            glowGradient.addColorStop(0.5, this.hexToRgba(p.color, stop05Alpha));
+            glowGradient.addColorStop(1, this.hexToRgba(p.color, 0));
+            
+            this.ctx.globalAlpha = 1;
+            this.ctx.fillStyle = glowGradient;
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, glowSize, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            // 粒子主体
+            this.ctx.globalAlpha = finalAlpha;
             this.ctx.fillStyle = p.color;
             this.ctx.beginPath();
             this.ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
             this.ctx.fill();
+            
             this.ctx.restore();
         }
+        
         this.ctx.restore();
     }
 
