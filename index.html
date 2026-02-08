@@ -59,6 +59,7 @@
                     <div class="settings-left">
                         <div class="settings-header">基础配置</div>
                         <div class="setting-item stack"><label for="title-input">排行榜标题</label><input type="text" id="title-input" value="十二星座动态排行榜" placeholder="请输入标题"></div>
+                        <div class="setting-item stack"><label for="title-size-input">标题大小</label><input type="range" id="title-size-input" min="16" max="48" value="24" step="1"><span id="title-size-value">24px</span></div>
                         <div class="setting-item stack">
                             <label for="title-color-input">标题颜色</label>
                             <input type="color" id="title-color-input" value="#ffffff" title="选择标题颜色">
@@ -100,9 +101,10 @@
                                     <option value="cyber">赛博朋克</option>
                                     <option value="space">太空深蓝</option>
                                 </select></div>
+                                <!-- 数值显示设置 -->
+                                <div class="setting-item"><label for="show-values">显示数值</label><div class="checkbox-group"><input type="checkbox" id="show-values" checked><label for="show-values">显示条形图右侧数值</label></div></div>
                                 
-                                <!-- 语音播报设置 -->
-                                <div class="setting-item"><label for="speech-enable">语音播报</label><div class="checkbox-group"><input type="checkbox" id="speech-enable" checked><label for="speech-enable">启用排名语音播报</label></div></div>
+
                             </div>
                         </div>
                     </div>

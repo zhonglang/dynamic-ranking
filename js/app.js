@@ -276,6 +276,9 @@ class DynamicRanking {
         this.titleInput = document.getElementById('title-input');
         // 新增：标题颜色选择器
         this.titleColorInput = document.getElementById('title-color-input');
+        // 新增：标题大小选择器
+        this.titleSizeInput = document.getElementById('title-size-input');
+        this.titleSizeValue = document.getElementById('title-size-value');
         this.durationInput = document.getElementById('animation-duration');
         this.animationTypeSelect = document.getElementById('animation-type');
         this.runButton = document.getElementById('run-animation');
@@ -298,6 +301,8 @@ class DynamicRanking {
         this.bgImageInput = document.getElementById('bg-image-input');
         this.bgOpacityInput = document.getElementById('bg-opacity');
         this.rankingBgImageEl = document.getElementById('ranking-bg-image');
+        // 新增：数值显示设置
+        this.showValuesInput = document.getElementById('show-values');
     }
 
 
@@ -359,6 +364,33 @@ class DynamicRanking {
             });
         } else {
             this.titleColor = '#ffffff';
+        }
+
+        // 标题大小设置
+        if (this.titleSizeInput && this.titleSizeValue) {
+            this.titleSize = parseInt(this.titleSizeInput.value) || 24;
+            this.titleSizeValue.textContent = this.titleSize + 'px';
+            
+            this.titleSizeInput.addEventListener('input', (e) => {
+                this.titleSize = parseInt(e.target.value) || 24;
+                this.titleSizeValue.textContent = this.titleSize + 'px';
+                // 更新DOM标题大小
+                if (this.rankingTitle) {
+                    this.rankingTitle.style.fontSize = this.titleSize + 'px';
+                }
+            });
+        } else {
+            this.titleSize = 24;
+        }
+
+        // 数值显示设置
+        if (this.showValuesInput) {
+            this.showValues = this.showValuesInput.checked;
+            this.showValuesInput.addEventListener('change', () => {
+                this.showValues = this.showValuesInput.checked;
+            });
+        } else {
+            this.showValues = true;
         }
 
         // 控制按钮
@@ -442,13 +474,7 @@ class DynamicRanking {
             });
         }
 
-        // 语音播报开关
-        this.speechEnableInput = document.getElementById('speech-enable');
-        if (this.speechEnableInput) {
-            this.speechEnableInput.addEventListener('change', () => {
-                this.speechEnabled = !!this.speechEnableInput.checked;
-            });
-        }
+
 
         // 高级面板 折叠/展开
         this.advancedToggleBtn = document.getElementById('advanced-toggle');
@@ -540,7 +566,10 @@ class DynamicRanking {
             // 标题
             this.title = this.titleInput.value.trim() || '排行榜';
             this.rankingTitle.textContent = this.title;
-            if (this.rankingTitle) this.rankingTitle.style.color = this.titleColor;
+            if (this.rankingTitle) {
+                this.rankingTitle.style.color = this.titleColor;
+                this.rankingTitle.style.fontSize = this.titleSize + 'px';
+            }
 
             // 先切换为 playing 状态以确保 canvas 可见，从而正确测量尺寸
             this.rankingContainer.classList.add('playing');
@@ -771,7 +800,10 @@ class DynamicRanking {
             // 设置标题
             this.title = this.titleInput.value.trim() || '排行榜';
             this.rankingTitle.textContent = this.title;
-            if (this.rankingTitle) this.rankingTitle.style.color = this.titleColor;
+            if (this.rankingTitle) {
+                this.rankingTitle.style.color = this.titleColor;
+                this.rankingTitle.style.fontSize = this.titleSize + 'px';
+            }
 
             // 先将容器置为 playing 状态以确保 canvas 可见并可正确测量尺寸
             this.rankingContainer.classList.add('playing');
@@ -1480,7 +1512,7 @@ class DynamicRanking {
         // use chosen title color (fallback to white)
         const titleColor = this.titleColor || '#ffffff';
         this.ctx.fillStyle = titleColor;
-        this.ctx.font = 'bold 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        this.ctx.font = `bold ${this.titleSize || 32}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
@@ -1665,13 +1697,15 @@ class DynamicRanking {
         this.ctx.font = '600 20px -apple-system, sans-serif';
         this.ctx.fillText(item.name, 55, y + itemHeight / 2);
 
-        // 数值绘制在条形图右侧
-        this.ctx.fillStyle = textColor;
-        this.ctx.globalAlpha = drawOpacity * 0.8;
-        this.ctx.textAlign = 'right';
-        this.ctx.font = '20px -apple-system, sans-serif';
-        const valueX = 20 + barWidth + 10;
-        this.ctx.fillText(item.value.toString(), valueX, y + itemHeight / 2);
+        // 数值绘制在条形图右侧（根据设置决定是否显示）
+        if (this.showValues) {
+            this.ctx.fillStyle = textColor;
+            this.ctx.globalAlpha = drawOpacity * 0.8;
+            this.ctx.textAlign = 'right';
+            this.ctx.font = '20px -apple-system, sans-serif';
+            const valueX = 20 + barWidth + 10;
+            this.ctx.fillText(item.value.toString(), valueX, y + itemHeight / 2);
+        }
 
         // 在 item 上记录最后一次绘制位置，供烟花效果定位使用
         item._lastDrawPos = {
