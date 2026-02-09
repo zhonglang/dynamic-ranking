@@ -11,6 +11,8 @@ class DynamicRanking {
         this.intervalDuration = 0.5; // 条形图间隔时间（秒）
         this.flyInDuration = 1000; // 条形图飞入时间（毫秒），默认1秒
         this.animationType = 'squeeze'; // 动画类型：squeeze, fade, slide, scale, flip, elevator
+        this.valuePosition = 'bar-end'; // 数值位置：bar-end (末端内), after-bar (末端外)
+        this.valueOffset = 25; // 数值偏移距离
         this.isRecording = false;
         this.mediaRecorder = null;
         this.recordedChunks = [];
@@ -302,7 +304,16 @@ class DynamicRanking {
         this.bgOpacityInput = document.getElementById('bg-opacity');
         this.rankingBgImageEl = document.getElementById('ranking-bg-image');
         // 新增：数值显示设置
-        this.showValuesInput = document.getElementById('show-values');
+        this.showValuesRadios = document.getElementsByName('show-values');
+        this.valuePositionRadios = document.getElementsByName('value-position');
+        this.valueOffsetContainer = document.getElementById('value-offset-container');
+        this.valueOffsetInput = document.getElementById('value-offset');
+        this.valueOffsetText = document.getElementById('value-offset-text');
+        this.barTextColorInput = document.getElementById('bar-text-color');
+        
+        // 新增：背景主题启用设置
+        this.bgThemeEnableRadios = document.getElementsByName('bg-theme-enable');
+        this.bgThemeSelectContainer = document.getElementById('bg-theme-select-container');
     }
 
 
@@ -383,14 +394,83 @@ class DynamicRanking {
             this.titleSize = 24;
         }
 
-        // 数值显示设置
-        if (this.showValuesInput) {
-            this.showValues = this.showValuesInput.checked;
-            this.showValuesInput.addEventListener('change', () => {
-                this.showValues = this.showValuesInput.checked;
+        // 数值显示设置 (单选框)
+        if (this.showValuesRadios && this.showValuesRadios.length > 0) {
+            this.showValuesRadios.forEach(radio => {
+                if (radio.checked) {
+                    this.showValues = (radio.value === 'yes');
+                }
+                radio.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        this.showValues = (e.target.value === 'yes');
+                    }
+                });
             });
         } else {
             this.showValues = true;
+        }
+
+        // 数值位置设置 (单选框)
+        if (this.valuePositionRadios && this.valuePositionRadios.length > 0) {
+            const updateVisibility = (value) => {
+                this.valuePosition = value;
+                if (this.valueOffsetContainer) {
+                    this.valueOffsetContainer.style.display = (value === 'after-bar') ? 'flex' : 'none';
+                }
+            };
+
+            // 初始化值
+            let initialValue = 'bar-end';
+            this.valuePositionRadios.forEach(radio => {
+                if (radio.checked) initialValue = radio.value;
+                radio.addEventListener('change', (e) => {
+                    if (e.target.checked) updateVisibility(e.target.value);
+                });
+            });
+            updateVisibility(initialValue);
+        } else {
+            this.valuePosition = 'bar-end';
+        }
+
+         // 数值偏移量设置
+         if (this.valueOffsetInput) {
+             this.valueOffset = parseInt(this.valueOffsetInput.value) || 25;
+             if (this.valueOffsetText) this.valueOffsetText.textContent = this.valueOffset + 'px';
+             this.valueOffsetInput.addEventListener('input', (e) => {
+                 this.valueOffset = parseInt(e.target.value) || 0;
+                 if (this.valueOffsetText) this.valueOffsetText.textContent = this.valueOffset + 'px';
+             });
+         }
+
+        // 文字颜色设置
+        if (this.barTextColorInput) {
+            this.barTextColor = this.barTextColorInput.value || '#ffffff';
+            this.barTextColorInput.addEventListener('input', (e) => {
+                this.barTextColor = e.target.value;
+            });
+        } else {
+            this.barTextColor = '#ffffff';
+        }
+
+        // 背景主题启用设置
+        if (this.bgThemeEnableRadios && this.bgThemeEnableRadios.length > 0) {
+            const updateBgThemeVisibility = (value) => {
+                this.bgThemeEnabled = (value === 'yes');
+                if (this.bgThemeSelectContainer) {
+                    this.bgThemeSelectContainer.style.display = (value === 'yes') ? 'flex' : 'none';
+                }
+            };
+            
+            let initialBgEnable = 'yes';
+            this.bgThemeEnableRadios.forEach(radio => {
+                if (radio.checked) initialBgEnable = radio.value;
+                radio.addEventListener('change', (e) => {
+                    if (e.target.checked) updateBgThemeVisibility(e.target.value);
+                });
+            });
+            updateBgThemeVisibility(initialBgEnable);
+        } else {
+            this.bgThemeEnabled = true;
         }
 
         // 控制按钮
@@ -1008,7 +1088,7 @@ class DynamicRanking {
      * 绘制呼吸灯效果：全局背景光晕
      */
     drawBreathingEffect(currentTime) {
-        if (!this.ctx) return;
+        if (!this.ctx || !this.bgThemeEnabled) return;
 
         // 呼吸灯周期：2秒一个完整循环（更快更明显）
         const breathingCycle = 2000; // 2秒
@@ -1091,7 +1171,7 @@ class DynamicRanking {
       * 绘制科技感背景效果
       */
      drawTechBackground(currentTime) {
-         if (!this.ctx || !this.techEnabled) return;
+         if (!this.ctx || !this.techEnabled || !this.bgThemeEnabled) return;
 
          // 绘制数字雨效果
          this.drawDigitalRain(currentTime);
@@ -1549,19 +1629,25 @@ class DynamicRanking {
         this.ctx.restore();
 
         // 绘制半透明覆盖层，增强文字可读性
-        const currentTheme = this.backgroundThemes[this.backgroundColor] || this.backgroundThemes.dark;
-        const gradient = this.ctx.createLinearGradient(0, 0, this.canvasWidth, this.canvasHeight);
-        gradient.addColorStop(0, currentTheme.gradient[0]);
-        gradient.addColorStop(1, currentTheme.gradient[1]);
-        this.ctx.fillStyle = gradient;
-        
-        // 根据背景图透明度调整覆盖层透明度
-        const overlayAlpha = this.bgImageObj ? Math.max(0.15, 0.55 - this.bgOpacity * 0.5) : 0.8;
-        this.ctx.globalAlpha = overlayAlpha;
-        this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
-        
-        // 恢复默认透明度
-        this.ctx.globalAlpha = 1;
+        if (this.bgThemeEnabled) {
+            const currentTheme = this.backgroundThemes[this.backgroundColor] || this.backgroundThemes.dark;
+            const gradient = this.ctx.createLinearGradient(0, 0, this.canvasWidth, this.canvasHeight);
+            gradient.addColorStop(0, currentTheme.gradient[0]);
+            gradient.addColorStop(1, currentTheme.gradient[1]);
+            this.ctx.fillStyle = gradient;
+            
+            // 根据背景图透明度调整覆盖层透明度
+            const overlayAlpha = this.bgImageObj ? Math.max(0.15, 0.55 - this.bgOpacity * 0.5) : 0.8;
+            this.ctx.globalAlpha = overlayAlpha;
+            this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+            
+            // 恢复默认透明度
+            this.ctx.globalAlpha = 1;
+        } else if (!this.bgImageObj) {
+            // 如果既没有背景主题也没有背景图，则绘制一个纯黑背景作为兜底
+            this.ctx.fillStyle = '#000000';
+            this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+        }
     }
 
     /**
@@ -1777,7 +1863,7 @@ class DynamicRanking {
         }
 
         // 绘制排名
-        this.ctx.fillStyle = textColor;
+        this.ctx.fillStyle = this.barTextColor || textColor;
         this.ctx.font = 'bold 18px -apple-system, sans-serif';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
@@ -1793,7 +1879,7 @@ class DynamicRanking {
         }
 
         // 绘制名称和数值
-        this.ctx.fillStyle = textColor;
+        this.ctx.fillStyle = this.barTextColor || textColor;
         this.ctx.textAlign = 'left';
         this.ctx.font = '600 20px -apple-system, sans-serif';
         this.ctx.fillText(item.name, 55, y + itemHeight / 2);
@@ -1809,23 +1895,38 @@ class DynamicRanking {
             this.ctx.restore();
         }
 
-        // 数值绘制在条形图右侧（根据设置决定是否显示）
+        // 数值绘制（根据设置决定位置和是否显示）
         if (this.showValues) {
-            this.ctx.fillStyle = textColor;
+            this.ctx.fillStyle = this.barTextColor || textColor;
             this.ctx.globalAlpha = drawOpacity * 0.8;
-            this.ctx.textAlign = 'right';
             this.ctx.font = '20px -apple-system, sans-serif';
-        const valueX = 20 + barWidth + 10;
+            
+            let valueX;
+            // 特殊规则：前二名始终在条形图末端（内部），其他排名根据配置决定
+            const isTop2 = item.displayRank <= 2;
+            const effectivePosition = isTop2 ? 'bar-end' : this.valuePosition;
+
+            if (effectivePosition === 'after-bar') {
+                this.ctx.textAlign = 'left';
+                // 仅在“条形图末端后”模式下使用配置的偏移量
+                valueX = 20 + barWidth + (this.valueOffset || 25);
+            } else {
+                this.ctx.textAlign = 'right';
+                // “条形图末端”模式（及前三名）始终使用固定内部偏移 10px，完全不受滑块影响
+                valueX = 20 + barWidth - 10;
+            }
+            
             this.ctx.fillText(item.value.toString(), valueX, y + itemHeight / 2);
+            
             if (this.animationType === 'glitch') {
                 const shift = Math.max(1, Math.abs(item.currentX || 0) * 0.15);
                 this.ctx.save();
                 this.ctx.globalCompositeOperation = 'screen';
                 this.ctx.globalAlpha = Math.min(1, drawOpacity + 0.2);
                 this.ctx.fillStyle = 'rgba(0, 255, 255, 0.7)';
-                this.ctx.fillText(item.value.toString(), valueX + shift, y + itemHeight / 2 - 1);
+                this.ctx.fillText(item.value.toString(), valueX + (effectivePosition === 'after-bar' ? shift : -shift), y + itemHeight / 2 - 1);
                 this.ctx.fillStyle = 'rgba(255, 0, 128, 0.6)';
-                this.ctx.fillText(item.value.toString(), valueX - shift, y + itemHeight / 2 + 1);
+                this.ctx.fillText(item.value.toString(), valueX - (effectivePosition === 'after-bar' ? shift : -shift), y + itemHeight / 2 + 1);
                 this.ctx.restore();
             }
         }

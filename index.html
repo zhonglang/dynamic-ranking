@@ -92,17 +92,55 @@
                                 <div class="setting-item"><label for="fireworks-core-ratio">核心亮点占比</label><input type="number" id="fireworks-core-ratio" value="0.04" min="0" max="0.5" step="0.01"></div>
                                 
                                 <!-- 背景色选择器 -->
-                                <div class="setting-item"><label for="background-theme">背景色主题</label><select id="background-theme">
-                                    <option value="dark">深色科技</option>
-                                    <option value="blue">科技蓝</option>
-                                    <option value="purple">科技紫</option>
-                                    <option value="green">科技绿</option>
-                                    <option value="red">科技红</option>
-                                    <option value="cyber">赛博朋克</option>
-                                    <option value="space">太空深蓝</option>
-                                </select></div>
+                                <div class="setting-item">
+                                    <label>启用背景主题</label>
+                                    <div class="radio-group">
+                                        <input type="radio" id="bg-theme-enable-yes" name="bg-theme-enable" value="yes" checked>
+                                        <label for="bg-theme-enable-yes">是</label>
+                                        <input type="radio" id="bg-theme-enable-no" name="bg-theme-enable" value="no">
+                                        <label for="bg-theme-enable-no">否</label>
+                                    </div>
+                                </div>
+                                <div id="bg-theme-select-container" class="setting-item">
+                                    <label for="background-theme">背景色主题</label>
+                                    <select id="background-theme">
+                                        <option value="dark">深色科技</option>
+                                        <option value="blue">科技蓝</option>
+                                        <option value="purple">科技紫</option>
+                                        <option value="green">科技绿</option>
+                                        <option value="red">科技红</option>
+                                        <option value="cyber">赛博朋克</option>
+                                        <option value="space">太空深蓝</option>
+                                    </select>
+                                </div>
                                 <!-- 数值显示设置 -->
-                                <div class="setting-item"><label for="show-values">显示数值</label><div class="checkbox-group"><input type="checkbox" id="show-values" checked><label for="show-values">显示条形图右侧数值</label></div></div>
+                                <div class="setting-item">
+                                      <label>显示数值</label>
+                                      <div class="radio-group">
+                                          <input type="radio" id="show-values-yes" name="show-values" value="yes" checked>
+                                          <label for="show-values-yes">是</label>
+                                          <input type="radio" id="show-values-no" name="show-values" value="no">
+                                          <label for="show-values-no">否</label>
+                                      </div>
+                                  </div>
+                                <div class="setting-item">
+                                      <label>数值位置</label>
+                                      <div class="radio-group">
+                                          <input type="radio" id="pos-bar-end" name="value-position" value="bar-end" checked>
+                                          <label for="pos-bar-end">末端</label>
+                                          <input type="radio" id="pos-after-bar" name="value-position" value="after-bar">
+                                          <label for="pos-after-bar">末端后</label>
+                                      </div>
+                                  </div>
+                                 <div class="setting-item">
+                                       <label for="bar-text-color">文字颜色</label>
+                                       <input type="color" id="bar-text-color" value="#ffffff">
+                                   </div>
+                                  <div id="value-offset-container" class="setting-item" style="display: none;">
+                                     <label for="value-offset">数值偏移距离</label>
+                                     <input type="range" id="value-offset" min="0" max="100" value="25" step="1">
+                                     <span id="value-offset-text">25px</span>
+                                 </div>
                                 
 
                             </div>

@@ -123,7 +123,7 @@ body {
 .settings-left .setting-item,
 .settings-right .setting-item {
     display: grid;
-    grid-template-columns: 1fr 130px; /* label | control */
+    grid-template-columns: 1fr 160px; /* label | control - increased from 130px */
     align-items: center;
     column-gap: var(--gap-md);
 }
@@ -160,6 +160,32 @@ body {
 .settings-left .setting-item input[type="number"],
 .settings-right .setting-item input[type="number"] {
     max-width: 120px;
+}
+
+/* radio styling */
+.radio-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 40px;
+    width: 100%;
+}
+
+.radio-group input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.radio-group label {
+    margin-left: 4px;
+    margin-right: 8px;
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
 }
 
 /* checkbox styling */
