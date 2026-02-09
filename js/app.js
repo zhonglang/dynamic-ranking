@@ -1648,6 +1648,9 @@ class DynamicRanking {
             this.ctx.fillStyle = '#000000';
             this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
         }
+
+        // 确保清除画布后，全局透明度恢复为 1，避免影响后续绘制
+        this.ctx.globalAlpha = 1;
     }
 
     /**
@@ -1752,8 +1755,6 @@ class DynamicRanking {
             // 使用在 updateAnimationState 中已计算好的 currentOpacity
             drawOpacity *= (item.currentOpacity !== undefined ? item.currentOpacity : 1);
         }
-
-        this.ctx.globalAlpha = drawOpacity;
 
         // 应用动画变换
         const centerX = this.canvasWidth / 2;
@@ -1887,7 +1888,7 @@ class DynamicRanking {
             const shift = Math.max(1, Math.abs(item.currentX || 0) * 0.15);
             this.ctx.save();
             this.ctx.globalCompositeOperation = 'screen';
-            this.ctx.globalAlpha = Math.min(1, drawOpacity + 0.2);
+            this.ctx.globalAlpha = 0.8; // 固定透明度，不再随项目透明度变化
             this.ctx.fillStyle = 'rgba(0, 255, 255, 0.7)';
             this.ctx.fillText(item.name, 55 + shift, y + itemHeight / 2 - 1);
             this.ctx.fillStyle = 'rgba(255, 0, 128, 0.6)';
@@ -1898,7 +1899,7 @@ class DynamicRanking {
         // 数值绘制（根据设置决定位置和是否显示）
         if (this.showValues) {
             this.ctx.fillStyle = this.barTextColor || textColor;
-            this.ctx.globalAlpha = drawOpacity * 0.8;
+            this.ctx.globalAlpha = 1.0; // 文字保持完全不透明，不受背景透明度影响
             this.ctx.font = '20px -apple-system, sans-serif';
             
             let valueX;
@@ -1922,7 +1923,7 @@ class DynamicRanking {
                 const shift = Math.max(1, Math.abs(item.currentX || 0) * 0.15);
                 this.ctx.save();
                 this.ctx.globalCompositeOperation = 'screen';
-                this.ctx.globalAlpha = Math.min(1, drawOpacity + 0.2);
+                this.ctx.globalAlpha = 0.8; // 固定透明度
                 this.ctx.fillStyle = 'rgba(0, 255, 255, 0.7)';
                 this.ctx.fillText(item.value.toString(), valueX + (effectivePosition === 'after-bar' ? shift : -shift), y + itemHeight / 2 - 1);
                 this.ctx.fillStyle = 'rgba(255, 0, 128, 0.6)';
