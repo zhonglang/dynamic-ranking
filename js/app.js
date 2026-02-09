@@ -993,6 +993,12 @@ class DynamicRanking {
                 return {y: 0, x: 0, scale: 1, rotation: 180};
             case 'elevator':
                 return {y: 600, x: 0, scale: 1, rotation: 0};
+            case 'glitch':
+                return {y: 0, x: 0, scale: 1, rotation: 0};
+            case 'scan':
+                return {y: 0, x: 0, scale: 1, rotation: 0, currentBarScale: 0, scanProgress: 0};
+            case 'wave':
+                return {y: 0, x: 0, scale: 1, rotation: 0};
             default:
                 return {y: -50, x: 0, scale: 1, rotation: 0};
         }
@@ -1175,10 +1181,8 @@ class DynamicRanking {
      drawTechBar(item, x, y, width, height, currentTime) {
          if (!this.ctx) return;
 
-         // 条形图发光边框
          this.ctx.save();
          
-         // 外发光效果
          const glowIntensity = Math.sin(currentTime * 0.005) * 0.3 + 0.7;
          const glowGradient = this.ctx.createLinearGradient(x, y, x + width, y);
          
@@ -1189,7 +1193,36 @@ class DynamicRanking {
          this.ctx.strokeStyle = glowGradient;
          this.ctx.lineWidth = 3;
          this.ctx.strokeRect(x - 2, y - 2, width + 4, height + 4);
-         
+
+        const innerGlow = this.ctx.createLinearGradient(x, y, x + width, y);
+        innerGlow.addColorStop(0, `rgba(255, 255, 255, ${0.08 * glowIntensity})`);
+        innerGlow.addColorStop(0.5, `rgba(0, 255, 255, ${0.12 * glowIntensity})`);
+        innerGlow.addColorStop(1, `rgba(255, 255, 255, ${0.06 * glowIntensity})`);
+        this.ctx.fillStyle = innerGlow;
+        this.ctx.globalCompositeOperation = 'screen';
+        this.ctx.fillRect(x, y, width, height);
+
+        const sweep = (currentTime * 0.002 + item.displayRank * 0.07) % 1;
+        const sweepX = x + width * sweep;
+        const sweepWidth = Math.max(4, width * 0.06);
+        const sweepGradient = this.ctx.createLinearGradient(sweepX - sweepWidth, y, sweepX + sweepWidth, y);
+        sweepGradient.addColorStop(0, 'rgba(0, 255, 255, 0)');
+        sweepGradient.addColorStop(0.5, `rgba(0, 255, 255, ${0.35 * glowIntensity})`);
+        sweepGradient.addColorStop(1, 'rgba(0, 255, 255, 0)');
+        this.ctx.fillStyle = sweepGradient;
+        this.ctx.fillRect(sweepX - sweepWidth, y, sweepWidth * 2, height);
+
+        this.ctx.globalCompositeOperation = 'lighter';
+        this.ctx.strokeStyle = `rgba(0, 255, 255, ${0.12 * glowIntensity})`;
+        this.ctx.lineWidth = 1;
+        const stripeGap = 8;
+        for (let i = -height; i < width + height; i += stripeGap) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x + i, y + height);
+            this.ctx.lineTo(x + i + height, y);
+            this.ctx.stroke();
+        }
+
          this.ctx.restore();
      }
 
@@ -1332,6 +1365,15 @@ class DynamicRanking {
             case 'elevator':
                 this.updateElevatorAnimation(item, progress);
                 break;
+            case 'glitch':
+                this.updateGlitchAnimation(item, progress);
+                break;
+            case 'scan':
+                this.updateScanAnimation(item, progress);
+                break;
+            case 'wave':
+                this.updateWaveAnimation(item, progress);
+                break;
             default:
                 this.updateSqueezeAnimation(item, progress);
         }
@@ -1410,6 +1452,38 @@ class DynamicRanking {
             }
         };
         item.currentY = 600 * (1 - easeOutBounce(progress));
+    }
+
+    updateGlitchAnimation(item, progress) {
+        const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+        const eased = easeOut(progress);
+        const t = performance.now() * 0.04;
+        const flicker = Math.sin(t * 0.9 + item.popupRank) * 0.18;
+        const spike = Math.max(0, Math.sin(t * 0.6 + item.displayRank) - 0.82);
+        const jitter = (1 - eased) * (12 + spike * 60);
+        item.currentX = Math.sin(t + item.popupRank) * jitter + Math.cos(t * 1.3 + item.displayRank) * jitter * 0.7;
+        item.currentOpacity = Math.min(1, eased + flicker);
+        item.currentSkew = (Math.sin(t * 0.7 + item.displayRank) * 0.12 + spike * 0.35) * (1 - eased);
+    }
+
+    updateScanAnimation(item, progress) {
+        const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+        const eased = easeOut(progress);
+        const overshoot = Math.min(1, eased + Math.sin(eased * Math.PI) * 0.08);
+        item.currentBarScale = overshoot;
+        item.scanProgress = eased;
+        item.currentOpacity = eased;
+    }
+
+    updateWaveAnimation(item, progress) {
+        const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+        const eased = easeOut(progress);
+        const t = performance.now() * 0.004;
+        const wave = Math.sin(t + item.displayRank * 0.7) * (1 - eased) * 16;
+        const settle = Math.sin(eased * Math.PI) * 0.08;
+        item.currentY = wave;
+        item.currentScale = 0.9 + 0.1 * eased + settle;
+        item.currentOpacity = eased;
     }
 
     /**
@@ -1571,6 +1645,9 @@ class DynamicRanking {
             case 'flip':
             case 'slide':
             case 'elevator':
+            case 'glitch':
+            case 'scan':
+            case 'wave':
             default:
                 // 其他动画类型：固定位置
                 drawY = startY + (item.displayRank - 1) * (itemHeight + itemMargin);
@@ -1585,10 +1662,7 @@ class DynamicRanking {
 
         // 根据动画类型计算透明度
         let drawOpacity = item.opacity;
-        if (this.animationType === 'fade') {
-            // 使用在 updateAnimationState 中已计算好的 currentOpacity
-            drawOpacity *= (item.currentOpacity !== undefined ? item.currentOpacity : 1);
-        } else if (this.animationType === 'flip') {
+        if (this.animationType === 'fade' || this.animationType === 'flip' || this.animationType === 'glitch' || this.animationType === 'scan' || this.animationType === 'wave') {
             // 使用在 updateAnimationState 中已计算好的 currentOpacity
             drawOpacity *= (item.currentOpacity !== undefined ? item.currentOpacity : 1);
         }
@@ -1626,11 +1700,26 @@ class DynamicRanking {
                 const offsetY = item.currentY !== undefined ? item.currentY : 0;
                 this.ctx.translate(0, offsetY);
                 break;
+            case 'glitch':
+                const glitchX = item.currentX !== undefined ? item.currentX : 0;
+                const glitchSkew = item.currentSkew !== undefined ? item.currentSkew : 0;
+                this.ctx.translate(glitchX, 0);
+                this.ctx.transform(1, glitchSkew, 0, 1, 0, 0);
+                break;
+            case 'wave':
+                const waveOffset = item.currentY !== undefined ? item.currentY : 0;
+                const waveScale = item.currentScale !== undefined ? item.currentScale : 1;
+                this.ctx.translate(centerX, centerY + waveOffset);
+                this.ctx.scale(waveScale, waveScale);
+                this.ctx.translate(-centerX, -(centerY + waveOffset));
+                break;
         }
 
         // 计算条形图宽度
         const maxBarWidth = this.canvasWidth - 40;
-        const barWidth = (item.percentage / 100) * maxBarWidth;
+        const baseBarWidth = (item.percentage / 100) * maxBarWidth;
+        const barScale = this.animationType === 'scan' ? (item.currentBarScale !== undefined ? item.currentBarScale : 0) : 1;
+        const barWidth = baseBarWidth * barScale;
 
         // 为所有项目创建更丰富的渐变色
         let barGradient;
@@ -1674,6 +1763,18 @@ class DynamicRanking {
         this.ctx.globalAlpha = drawOpacity;
         this.ctx.fill();
         this.ctx.restore();
+        if (this.animationType === 'scan') {
+            const sweepWidth = Math.max(6, barWidth * 0.08);
+            const sweepX = 20 + barWidth;
+            const sweepGradient = this.ctx.createLinearGradient(sweepX - sweepWidth, y, sweepX + sweepWidth, y);
+            sweepGradient.addColorStop(0, 'rgba(0, 255, 255, 0)');
+            sweepGradient.addColorStop(0.5, `rgba(0, 255, 255, ${0.6 * drawOpacity})`);
+            sweepGradient.addColorStop(1, 'rgba(0, 255, 255, 0)');
+            this.ctx.save();
+            this.ctx.fillStyle = sweepGradient;
+            this.ctx.fillRect(sweepX - sweepWidth, y, sweepWidth * 2, itemHeight);
+            this.ctx.restore();
+        }
 
         // 绘制排名
         this.ctx.fillStyle = textColor;
@@ -1696,6 +1797,17 @@ class DynamicRanking {
         this.ctx.textAlign = 'left';
         this.ctx.font = '600 20px -apple-system, sans-serif';
         this.ctx.fillText(item.name, 55, y + itemHeight / 2);
+        if (this.animationType === 'glitch') {
+            const shift = Math.max(1, Math.abs(item.currentX || 0) * 0.15);
+            this.ctx.save();
+            this.ctx.globalCompositeOperation = 'screen';
+            this.ctx.globalAlpha = Math.min(1, drawOpacity + 0.2);
+            this.ctx.fillStyle = 'rgba(0, 255, 255, 0.7)';
+            this.ctx.fillText(item.name, 55 + shift, y + itemHeight / 2 - 1);
+            this.ctx.fillStyle = 'rgba(255, 0, 128, 0.6)';
+            this.ctx.fillText(item.name, 55 - shift, y + itemHeight / 2 + 1);
+            this.ctx.restore();
+        }
 
         // 数值绘制在条形图右侧（根据设置决定是否显示）
         if (this.showValues) {
@@ -1703,8 +1815,19 @@ class DynamicRanking {
             this.ctx.globalAlpha = drawOpacity * 0.8;
             this.ctx.textAlign = 'right';
             this.ctx.font = '20px -apple-system, sans-serif';
-            const valueX = 20 + barWidth + 10;
+        const valueX = 20 + barWidth + 10;
             this.ctx.fillText(item.value.toString(), valueX, y + itemHeight / 2);
+            if (this.animationType === 'glitch') {
+                const shift = Math.max(1, Math.abs(item.currentX || 0) * 0.15);
+                this.ctx.save();
+                this.ctx.globalCompositeOperation = 'screen';
+                this.ctx.globalAlpha = Math.min(1, drawOpacity + 0.2);
+                this.ctx.fillStyle = 'rgba(0, 255, 255, 0.7)';
+                this.ctx.fillText(item.value.toString(), valueX + shift, y + itemHeight / 2 - 1);
+                this.ctx.fillStyle = 'rgba(255, 0, 128, 0.6)';
+                this.ctx.fillText(item.value.toString(), valueX - shift, y + itemHeight / 2 + 1);
+                this.ctx.restore();
+            }
         }
 
         // 在 item 上记录最后一次绘制位置，供烟花效果定位使用
