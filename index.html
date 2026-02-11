@@ -133,6 +133,10 @@
                                     <option value="red">科技红</option>
                                     <option value="cyber">赛博朋克</option>
                                     <option value="space">太空深蓝</option>
+                                    <option value="matrix">矩阵网格 (静态)</option>
+                                    <option value="circuit">电子电路 (静态)</option>
+                                    <option value="blueprint">蓝图设计 (静态)</option>
+                                    <option value="nebula">深邃星云 (静态)</option>
                                 </select>
                             </div>
                         </div>
@@ -214,16 +218,15 @@
                                     <label><input type="radio" name="value-position" value="outside-bar"> 条形外</label>
                                 </div>
                             </div>
-                            <div class="setting-item" id="value-offset-container" style="display: none;">
-                                <label for="value-offset">外置偏移</label>
-                                <div class="range-with-value">
-                                    <input type="range" id="value-offset" min="0" max="100" value="10">
-                                    <span id="value-offset-display">10px</span>
-                                </div>
-                            </div>
                             <div class="setting-item">
                                 <label for="value-color-input">数值颜色</label>
                                 <input type="color" id="value-color-input" value="#ffffff">
+                            </div>
+                            <div class="setting-item">
+                                <label for="non-top-two-outside">特殊规则</label>
+                                <div class="checkbox-group">
+                                    <label><input type="checkbox" id="non-top-two-outside" checked> 条形外仅影响非前两名</label>
+                                </div>
                             </div>
                         </div>
                     </div>

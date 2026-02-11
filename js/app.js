@@ -63,7 +63,11 @@ class DynamicRanking {
             green: { name: '科技绿', gradient: ['#0f1a1a', '#065f46'] },
             red: { name: '科技红', gradient: ['#1a0f0f', '#991b1b'] },
             cyber: { name: '赛博朋克', gradient: ['#0f0f1a', '#4c1d95'] },
-            space: { name: '太空深蓝', gradient: ['#0a0a1a', '#1e40af'] }
+            space: { name: '太空深蓝', gradient: ['#0a0a1a', '#1e40af'] },
+            matrix: { name: '矩阵网格', gradient: ['#000500', '#001a00'] },
+            circuit: { name: '电子电路', gradient: ['#050a15', '#0a1e3c'] },
+            blueprint: { name: '蓝图设计', gradient: ['#001a33', '#003366'] },
+            nebula: { name: '深邃星云', gradient: ['#050010', '#150025'] }
         };
         
         // 初始化科技感效果
@@ -349,10 +353,8 @@ class DynamicRanking {
         this.rankingBgImageEl = document.getElementById('ranking-bg-image');
         // 新增：数值显示设置
         this.valuePositionRadios = document.getElementsByName('value-position');
-        this.valueOffsetContainer = document.getElementById('value-offset-container');
-        this.valueOffsetInput = document.getElementById('value-offset');
-        this.valueOffsetDisplay = document.getElementById('value-offset-display');
         this.valueColorInput = document.getElementById('value-color-input');
+        this.nonTopTwoOutsideCheckbox = document.getElementById('non-top-two-outside');
         
         // 新增：背景主题启用设置
         this.bgThemeEnableRadios = document.getElementsByName('bg-theme-enable');
@@ -481,9 +483,6 @@ class DynamicRanking {
         if (this.valuePositionRadios && this.valuePositionRadios.length > 0) {
             const updateVisibility = (value) => {
                 this.valuePosition = value;
-                if (this.valueOffsetContainer) {
-                    this.valueOffsetContainer.style.display = (value === 'outside-bar') ? 'flex' : 'none';
-                }
                 
                 // 实时预览更新
                 if (this.isPreview || this.isRecording) {
@@ -504,20 +503,17 @@ class DynamicRanking {
             this.valuePosition = 'inside-bar';
         }
 
-         // 数值偏移量设置
-         if (this.valueOffsetInput) {
-             this.valueOffset = parseInt(this.valueOffsetInput.value) || 10;
-             if (this.valueOffsetDisplay) this.valueOffsetDisplay.textContent = this.valueOffset + 'px';
-             this.valueOffsetInput.addEventListener('input', (e) => {
-                 this.valueOffset = parseInt(e.target.value) || 0;
-                 if (this.valueOffsetDisplay) this.valueOffsetDisplay.textContent = this.valueOffset + 'px';
-                 
-                 // 实时预览更新
-                 if (this.isPreview || this.isRecording) {
-                     this.draw();
-                 }
-             });
-         }
+         // 特殊规则：前二名
+        if (this.nonTopTwoOutsideCheckbox) {
+            this.nonTopTwoOutside = !!this.nonTopTwoOutsideCheckbox.checked;
+            this.nonTopTwoOutsideCheckbox.addEventListener('change', (e) => {
+                this.nonTopTwoOutside = !!e.target.checked;
+                // 实时预览更新
+                if (this.isPreview || this.isRecording) {
+                    this.draw();
+                }
+            });
+        }
 
         // 数值颜色设置
         if (this.valueColorInput) {
@@ -1251,14 +1247,128 @@ class DynamicRanking {
      drawTechBackground(currentTime) {
          if (!this.ctx || !this.techEnabled || !this.bgThemeEnabled) return;
 
-         // 绘制数字雨效果
+         const currentTheme = this.backgroundColor;
+         
+         // 如果是新增的静态背景，绘制静态图案
+         if (['matrix', 'circuit', 'blueprint', 'nebula'].includes(currentTheme)) {
+             this.drawStaticTechBackground(currentTheme);
+             return;
+         }
+
+         // 否则绘制原有的动态科技感效果
          this.drawDigitalRain(currentTime);
-         
-         // 绘制网格线
          this.drawGridLines(currentTime);
-         
-         // 绘制星光粒子
          this.drawStarParticles(currentTime);
+     }
+
+     /**
+      * 绘制静态科技感背景图案
+      */
+     drawStaticTechBackground(theme) {
+         this.ctx.save();
+         
+         switch (theme) {
+             case 'matrix':
+                 // 绘制密集网格矩阵
+                 this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.1)';
+                 this.ctx.lineWidth = 1;
+                 const matrixSize = 20;
+                 for (let x = 0; x < this.canvasWidth; x += matrixSize) {
+                     for (let y = 0; y < this.canvasHeight; y += matrixSize) {
+                         if (Math.random() > 0.9) {
+                             this.ctx.fillStyle = 'rgba(0, 255, 0, 0.05)';
+                             this.ctx.fillRect(x, y, matrixSize, matrixSize);
+                         }
+                         this.ctx.strokeRect(x, y, matrixSize, matrixSize);
+                     }
+                 }
+                 break;
+                 
+             case 'circuit':
+                 // 绘制电子电路线条
+                 this.ctx.strokeStyle = 'rgba(0, 200, 255, 0.15)';
+                 this.ctx.lineWidth = 1.5;
+                 const seed = 12345; // 固定随机种子以保持静态
+                 let tempRandom = (s) => {
+                     s = Math.sin(s) * 10000;
+                     return s - Math.floor(s);
+                 };
+                 
+                 for (let i = 0; i < 40; i++) {
+                     let x = tempRandom(i * 1.1) * this.canvasWidth;
+                     let y = tempRandom(i * 1.2) * this.canvasHeight;
+                     let len = 50 + tempRandom(i * 1.3) * 150;
+                     let angle = Math.floor(tempRandom(i * 1.4) * 4) * 90; // 0, 90, 180, 270
+                     
+                     this.ctx.beginPath();
+                     this.ctx.moveTo(x, y);
+                     let dx = Math.cos(angle * Math.PI / 180) * len;
+                     let dy = Math.sin(angle * Math.PI / 180) * len;
+                     this.ctx.lineTo(x + dx, y + dy);
+                     this.ctx.stroke();
+                     
+                     // 绘制接点圆圈
+                     this.ctx.beginPath();
+                     this.ctx.arc(x, y, 3, 0, Math.PI * 2);
+                     this.ctx.stroke();
+                 }
+                 break;
+                 
+             case 'blueprint':
+                 // 绘制蓝图设计感网格
+                 this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+                 this.ctx.lineWidth = 0.5;
+                 // 大方格
+                 for (let x = 0; x < this.canvasWidth; x += 100) {
+                     this.ctx.beginPath();
+                     this.ctx.moveTo(x, 0);
+                     this.ctx.lineTo(x, this.canvasHeight);
+                     this.ctx.stroke();
+                 }
+                 for (let y = 0; y < this.canvasHeight; y += 100) {
+                     this.ctx.beginPath();
+                     this.ctx.moveTo(0, y);
+                     this.ctx.lineTo(this.canvasWidth, y);
+                     this.ctx.stroke();
+                 }
+                 // 小方格
+                 this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+                 for (let x = 0; x < this.canvasWidth; x += 20) {
+                     this.ctx.beginPath();
+                     this.ctx.moveTo(x, 0);
+                     this.ctx.lineTo(x, this.canvasHeight);
+                     this.ctx.stroke();
+                 }
+                 for (let y = 0; y < this.canvasHeight; y += 20) {
+                     this.ctx.beginPath();
+                     this.ctx.moveTo(0, y);
+                     this.ctx.lineTo(this.canvasWidth, y);
+                     this.ctx.stroke();
+                 }
+                 break;
+                 
+             case 'nebula':
+                 // 绘制深邃星云感
+                 for (let i = 0; i < 5; i++) {
+                     const x = (i / 5) * this.canvasWidth + (Math.sin(i) * 100);
+                     const y = (i % 2) * (this.canvasHeight / 2) + 200;
+                     const radius = 300 + i * 50;
+                     const grad = this.ctx.createRadialGradient(x, y, 0, x, y, radius);
+                     const colors = [
+                         'rgba(100, 0, 255, 0.05)',
+                         'rgba(0, 100, 255, 0.03)',
+                         'rgba(255, 0, 100, 0.02)',
+                         'rgba(0, 0, 0, 0)'
+                     ];
+                     grad.addColorStop(0, colors[i % colors.length]);
+                     grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                     this.ctx.fillStyle = grad;
+                     this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+                 }
+                 break;
+         }
+         
+         this.ctx.restore();
      }
 
      /**
@@ -2031,16 +2141,19 @@ class DynamicRanking {
             
             let valueX;
             // 特殊规则：前二名始终在条形图末端（内部），其他排名根据配置决定
-            const isTop2 = item.displayRank <= 2;
+            const isTop2 = item.displayRank <= 2 && this.nonTopTwoOutside;
             const effectivePosition = isTop2 ? 'inside-bar' : this.valuePosition;
 
             if (effectivePosition === 'outside-bar') {
                 this.ctx.textAlign = 'left';
-                // 仅在“条形图末端后”模式下使用配置的偏移量
-                valueX = 20 + barWidth + (this.valueOffset || 10);
+                // 计算数值的最大宽度，用于确定对齐起点
+                // 假设数值最大位数为 10 位，大致宽度在 100px 左右
+                // 为了让数值左对齐且紧贴右侧 20px 边距，我们需要从右侧边界向左偏移一个固定宽度
+                const valueMaxWidth = 100; 
+                valueX = this.canvasWidth - 20 - valueMaxWidth;
             } else {
                 this.ctx.textAlign = 'right';
-                // “条形图末端”模式（及前二名）始终使用固定内部偏移 10px，完全不受滑块影响
+                // “条形图末端”模式（及前二名）始终使用固定内部偏移 10px
                 valueX = 20 + barWidth - 10;
             }
             
@@ -2209,12 +2322,22 @@ class DynamicRanking {
     }
 
     // 发射一枚火箭，从画布底部发射并在接近目标时爆炸
-    spawnRocketTowards(targetX, targetY) {
+    spawnRocketTowards(targetX, targetY, rank = 10) {
         const startX = Math.max(40, Math.min(this.canvasWidth - 40, targetX + (Math.random() - 0.5) * 120));
         const startY = this.canvasHeight + 10;
         
         // 目标高度：在条形图上方随机位置爆炸
-        const explosionY = targetY - (20 + Math.random() * 60);
+        // 优化：名次越靠前，上升越高
+        let explosionY = targetY - (20 + Math.random() * 60);
+        
+        // 名次加成：名次越小（越靠前），额外上升高度越高
+        if (rank <= 10) {
+            const heightBonus = (11 - rank) * 30; // 第一名额外上升 300px，第十名 30px
+            explosionY -= heightBonus;
+        }
+        
+        // 确保不会飞出画布顶端（留出 60px 边距供爆炸效果展示）
+        explosionY = Math.max(60, explosionY);
         
         // 计算初始速度以到达目标高度（物理公式：v^2 = 2gh）
         const gravity = 0.0015; // 稍强的重力
@@ -2352,7 +2475,12 @@ class DynamicRanking {
                             // 随机选择触发名次中的一个发射火箭
                             const randomIndex = Math.floor(Math.random() * triggerItems.length);
                             const posItem = triggerItems[randomIndex];
-                            this.spawnRocketTowards(posItem._lastDrawPos.x + (Math.random() - 0.5) * 40, posItem._lastDrawPos.y);
+                            // 将烟花发射位置调整到画布水平中心区域，而不是条形图中心点
+                            // 这样即便条形图很短，烟花也会在中间播放
+                            const centerX = this.canvasWidth / 2;
+                            const spread = 400; // 水平分布范围
+                            const targetX = centerX + (Math.random() - 0.5) * spread;
+                            this.spawnRocketTowards(targetX, posItem._lastDrawPos.y, posItem.displayRank);
                         } else {
                             const rx = 100 + Math.random() * (this.canvasWidth - 200);
                             const ry = 80 + Math.random() * (this.canvasHeight / 2);
