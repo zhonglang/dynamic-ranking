@@ -1073,6 +1073,8 @@ class DynamicRanking {
                 return {y: 0, x: 0, scale: 1, rotation: 180};
             case 'elevator':
                 return {y: 600, x: 0, scale: 1, rotation: 0};
+            case 'fly-down':
+                return {y: -300, x: 0, scale: 1, rotation: 0};
             case 'glitch':
                 return {y: 0, x: 0, scale: 1, rotation: 0};
             case 'scan':
@@ -1445,6 +1447,9 @@ class DynamicRanking {
             case 'elevator':
                 this.updateElevatorAnimation(item, progress);
                 break;
+            case 'fly-down':
+                this.updateFlyDownAnimation(item, progress);
+                break;
             case 'glitch':
                 this.updateGlitchAnimation(item, progress);
                 break;
@@ -1532,6 +1537,50 @@ class DynamicRanking {
             }
         };
         item.currentY = 600 * (1 - easeOutBounce(progress));
+    }
+
+    /**
+     * 上方飞入式动画更新
+     */
+    updateFlyDownAnimation(item, progress) {
+        const easeOutBounce = (t) => {
+            const n1 = 7.5625;
+            const d1 = 2.75;
+            if (t < 1 / d1) {
+                return n1 * t * t;
+            } else if (t < 2 / d1) {
+                return n1 * (t -= 1.5 / d1) * t + 0.75;
+            } else if (t < 2.5 / d1) {
+                return n1 * (t -= 2.25 / d1) * t + 0.9375;
+            } else {
+                return n1 * (t -= 2.625 / d1) * t + 0.984375;
+            }
+        };
+        
+        // 计算条目在排行榜中的目标 Y 坐标（基于 displayRank）
+        const itemHeight = 35;
+        const itemMargin = 15;
+        const startY = 120;
+        const targetY = startY + (item.displayRank - 1) * (itemHeight + itemMargin);
+        
+        // 初始位置统一设为 Canvas 顶部外（例如 -100 像素）
+        const initialY = -100;
+        
+        // 计算飞入所需的总距离
+        const totalDistance = targetY - initialY;
+        
+        // 根据进度计算当前位置，确保最终位置为 targetY
+        // 注意：drawItem 中已经会加上 targetY，所以这里计算的是偏移量
+        // item.currentY = initialY + totalDistance * easeOutBounce(progress) - targetY;
+        
+        // 简化逻辑：在 drawItem 中我们使用 translate(0, offsetY)
+        // 其中 offsetY = item.currentY。
+        // 我们希望最终绘制坐标是 targetY，
+        // 而 drawItem 中默认绘制坐标已经是 targetY (通过 startY + ... 计算得出)
+        // 所以当 progress = 1 时，offsetY 必须为 0。
+        // 当 progress = 0 时，offsetY 应使 y + offsetY = initialY => offsetY = initialY - targetY。
+        
+        item.currentY = (initialY - targetY) * (1 - easeOutBounce(progress));
     }
 
     updateGlitchAnimation(item, progress) {
@@ -1783,7 +1832,8 @@ class DynamicRanking {
                 this.ctx.translate(offsetX, 0);
                 break;
             case 'elevator':
-                // 升降机式 - 使用预先计算好的 currentY
+            case 'fly-down':
+                // 升降机式或上方飞入式 - 使用预先计算好的 currentY
                 const offsetY = item.currentY !== undefined ? item.currentY : 0;
                 this.ctx.translate(0, offsetY);
                 break;
