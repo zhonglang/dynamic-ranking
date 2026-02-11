@@ -53,97 +53,182 @@
                 </div>
             </div>
 
-            <!-- 设置区域：左列为四个主要配置，右列放其余高级配置；底部按钮放入该容器 -->
-            <div class="settings-section">
-                <div class="settings-columns">
-                    <div class="settings-left">
-                        <div class="settings-header">基础配置</div>
-                        <div class="setting-item stack"><label for="title-input">排行榜标题</label><input type="text" id="title-input" value="十二星座动态排行榜" placeholder="请输入标题"></div>
-                        <div class="setting-item stack"><label for="title-size-input">标题大小</label><input type="range" id="title-size-input" min="16" max="48" value="24" step="1"><span id="title-size-value">24px</span></div>
-                        <div class="setting-item stack">
-                            <label for="title-color-input">标题颜色</label>
-                            <input type="color" id="title-color-input" value="#ffffff" title="选择标题颜色">
-                        </div>
-                        <div class="setting-item stack"><label for="animation-type">动画类型</label><select id="animation-type"><option value="squeeze">🎯 挤压式</option><option value="fade">💫 淡入式</option><option value="slide">🚀 横向滑入式</option><option value="scale">🎪 缩放弹跳式</option><option value="flip">🃏 翻转卡片式</option><option value="elevator">🛗 升降机式</option><option value="fly-down">🦅 上方飞入式</option><option value="glitch">🧬 故障闪烁</option><option value="scan">📡 扫描光束</option><option value="wave">🌊 波动入场</option></select></div>
-                        <div class="setting-item stack"><label for="animation-duration">条形图间隔时间（秒）</label><input type="number" id="animation-duration" value="0.5" min="0.1" max="2" step="0.1"></div>
+            <!-- 设置区域 -->
+            <!-- 配置区域：分为左右 Tab 布局 -->
+            <div class="settings-container">
+                <!-- 顶部 Tab 导航 -->
+                <div class="settings-tabs">
+                    <button class="tab-item active" data-tab="title-settings">
+                        <span class="tab-icon">📝</span>
+                        <span class="tab-text">标题设置</span>
+                    </button>
+                    <button class="tab-item" data-tab="bg-settings">
+                        <span class="tab-icon">🖼️</span>
+                        <span class="tab-text">背景设置</span>
+                    </button>
+                    <button class="tab-item" data-tab="anim-settings">
+                        <span class="tab-icon">🎬</span>
+                        <span class="tab-text">动画设置</span>
+                    </button>
+                    <button class="tab-item" data-tab="fx-settings">
+                        <span class="tab-icon">✨</span>
+                        <span class="tab-text">特效设置</span>
+                    </button>
+                    <button class="tab-item" data-tab="value-settings">
+                        <span class="tab-icon">🔢</span>
+                        <span class="tab-text">数值显示</span>
+                    </button>
+                </div>
 
-                        <!-- 新增：背景图上传与透明度控制 -->
-                        <div class="setting-item stack">
-                            <label for="bg-image-input">背景图</label>
-                            <input type="file" id="bg-image-input" accept="image/*">
-                        </div>
-                        <div class="setting-item">
-                            <label for="bg-opacity">背景图透明度</label>
-                            <input type="range" id="bg-opacity" min="0" max="1" step="0.01" value="1">
-                        </div>
-
-                    </div>
-                    <div class="settings-right">
-                        <div class="advanced-panel">
-                            <div class="settings-header">
-                                高级配置
+                <!-- 配置内容 -->
+                <div class="settings-content">
+                    <!-- 1. 标题设置 -->
+                    <div class="tab-pane active" id="title-settings">
+                        <div class="settings-header">标题设置</div>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label for="title-input">排行榜标题</label>
+                                <input type="text" id="title-input" placeholder="输入排行榜标题" value="十二星座动态排行榜">
                             </div>
-                            <div id="advanced-content" class="advanced-content">
-                                <!-- 将烟花启用开关放在高级配置内部，位于烟花持续（秒）上方 -->
-                                <div class="setting-item"><label for="fireworks-enable">烟花效果</label><div class="checkbox-group"><input type="checkbox" id="fireworks-enable" checked><label for="fireworks-enable">启用前三名烟花</label></div></div>
-                                
-                                <!-- 背景色选择器 -->
-                                <div class="setting-item">
-                                    <label>启用背景主题</label>
-                                    <div class="radio-group">
-                                        <input type="radio" id="bg-theme-enable-yes" name="bg-theme-enable" value="yes" checked>
-                                        <label for="bg-theme-enable-yes">是</label>
-                                        <input type="radio" id="bg-theme-enable-no" name="bg-theme-enable" value="no">
-                                        <label for="bg-theme-enable-no">否</label>
-                                    </div>
+                            <div class="setting-item">
+                                <label for="title-size-input">标题大小</label>
+                                <div class="range-with-value">
+                                    <input type="range" id="title-size-input" min="12" max="64" value="24">
+                                    <span id="title-size-value">24px</span>
                                 </div>
-                                <div id="bg-theme-select-container" class="setting-item">
-                                    <label for="background-theme">背景色主题</label>
-                                    <select id="background-theme">
-                                        <option value="dark">深色科技</option>
-                                        <option value="blue">科技蓝</option>
-                                        <option value="purple">科技紫</option>
-                                        <option value="green">科技绿</option>
-                                        <option value="red">科技红</option>
-                                        <option value="cyber">赛博朋克</option>
-                                        <option value="space">太空深蓝</option>
+                            </div>
+                            <div class="setting-item">
+                                <label for="title-color-input">标题颜色</label>
+                                <input type="color" id="title-color-input" value="#ffffff">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. 背景设置 -->
+                    <div class="tab-pane" id="bg-settings">
+                        <div class="settings-header">背景设置</div>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label for="bg-image-input">背景图</label>
+                                <div class="file-with-clear">
+                                    <input type="file" id="bg-image-input" accept="image/*">
+                                    <button id="clear-bg-image" class="clear-btn" title="清除背景图">✕</button>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <label for="bg-opacity">背景透明度</label>
+                                <div class="range-with-value">
+                                    <input type="range" id="bg-opacity" min="0" max="1" step="0.01" value="1">
+                                    <span id="bg-opacity-value">1.00</span>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <label for="background-theme">主题颜色</label>
+                                <select id="background-theme">
+                                    <option value="none">无主题</option>
+                                    <option value="dark">深色科技</option>
+                                    <option value="blue" selected>科技蓝</option>
+                                    <option value="purple">科技紫</option>
+                                    <option value="green">科技绿</option>
+                                    <option value="red">科技红</option>
+                                    <option value="cyber">赛博朋克</option>
+                                    <option value="space">太空深蓝</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. 动画设置 -->
+                    <div class="tab-pane" id="anim-settings">
+                        <div class="settings-header">动画设置</div>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label for="animation-type">动画类型</label>
+                                <select id="animation-type">
+                                    <option value="squeeze">🎯 挤压式</option>
+                                    <option value="fade">💫 淡入式</option>
+                                    <option value="slide">🚀 横向滑入式</option>
+                                    <option value="scale">🎪 缩放弹跳式</option>
+                                    <option value="flip">🃏 翻转卡片式</option>
+                                    <option value="elevator">🛗 升降机式</option>
+                                    <option value="fly-down">🦅 上方飞入式</option>
+                                    <option value="glitch">🧬 故障闪烁</option>
+                                    <option value="scan">📡 扫描光束</option>
+                                    <option value="wave">🌊 波动入场</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label for="animation-duration">间隔时间 (秒)</label>
+                                <input type="number" id="animation-duration" value="0.5" min="0.1" max="2" step="0.1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. 特效设置 -->
+                    <div class="tab-pane" id="fx-settings">
+                        <div class="settings-header">特效设置</div>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label>烟花特效</label>
+                                <div class="radio-group">
+                                    <label><input type="radio" name="fireworks-enable" value="on" checked> 开启</label>
+                                    <label><input type="radio" name="fireworks-enable" value="off"> 关闭</label>
+                                </div>
+                            </div>
+                            <div id="fireworks-config-container">
+                                <div class="setting-item">
+                                    <label for="fireworks-trigger-rank">触发名次</label>
+                                    <select id="fireworks-trigger-rank">
+                                        <option value="3" selected>第3名</option>
                                     </select>
                                 </div>
-                                <!-- 数值显示设置 -->
                                 <div class="setting-item">
-                                      <label>显示数值</label>
-                                      <div class="radio-group">
-                                          <input type="radio" id="show-values-yes" name="show-values" value="yes" checked>
-                                          <label for="show-values-yes">是</label>
-                                          <input type="radio" id="show-values-no" name="show-values" value="no">
-                                          <label for="show-values-no">否</label>
-                                      </div>
-                                  </div>
+                                    <label for="fireworks-density">烟花密度</label>
+                                    <div class="range-with-value">
+                                        <input type="range" id="fireworks-density" min="1" max="10" value="5">
+                                        <span id="fireworks-density-display">5</span>
+                                    </div>
+                                </div>
                                 <div class="setting-item">
-                                      <label>数值位置</label>
-                                      <div class="radio-group">
-                                          <input type="radio" id="pos-bar-end" name="value-position" value="bar-end" checked>
-                                          <label for="pos-bar-end">末端</label>
-                                          <input type="radio" id="pos-after-bar" name="value-position" value="after-bar">
-                                          <label for="pos-after-bar">末端后</label>
-                                      </div>
-                                  </div>
-                                 <div class="setting-item">
-                                       <label for="bar-text-color">文字颜色</label>
-                                       <input type="color" id="bar-text-color" value="#ffffff">
-                                   </div>
-                                  <div id="value-offset-container" class="setting-item" style="display: none;">
-                                     <label for="value-offset">数值偏移距离</label>
-                                     <input type="range" id="value-offset" min="0" max="100" value="25" step="1">
-                                     <span id="value-offset-text">25px</span>
-                                 </div>
-                                
-
+                                    <label for="fireworks-shape">烟花图案</label>
+                                    <select id="fireworks-shape">
+                                        <option value="random">随机图案</option>
+                                        <option value="circle">经典圆形</option>
+                                        <option value="heart">浪漫心形</option>
+                                        <option value="star">璀璨星形</option>
+                                        <option value="burst">爆炸散射</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div> <!-- /.settings-section -->
+
+                    <!-- 5. 数值显示 -->
+                    <div class="tab-pane" id="value-settings">
+                        <div class="settings-header">数值显示</div>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label>显示位置</label>
+                                <div class="radio-group">
+                                    <label><input type="radio" name="value-position" value="inside-bar" checked> 条形内</label>
+                                    <label><input type="radio" name="value-position" value="outside-bar"> 条形外</label>
+                                </div>
+                            </div>
+                            <div class="setting-item" id="value-offset-container" style="display: none;">
+                                <label for="value-offset">外置偏移</label>
+                                <div class="range-with-value">
+                                    <input type="range" id="value-offset" min="0" max="100" value="10">
+                                    <span id="value-offset-display">10px</span>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <label for="value-color-input">数值颜色</label>
+                                <input type="color" id="value-color-input" value="#ffffff">
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- /.settings-content -->
+            </div> <!-- /.settings-container -->
 
             <!-- 控制按钮：作为 config-panel 的独立一行，保证始终可见 -->
             <div class="panel-controls">

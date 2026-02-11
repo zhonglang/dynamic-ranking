@@ -32,14 +32,16 @@ class DynamicRanking {
 
         // 烟花状态（初始默认）
         this.fireworksEnabled = true; // 是否启用（从 UI 读取）
+        this.fireworksTriggerRank = 3; // 默认前3名触发
         this.isPreview = false; // 非录制的预览模式标志
         this.fireworksActive = false;
         this.fireworksStartTime = 0;
-        this.fireworksDuration = 1500; // 毫秒，烟花持续时长（进一步缩短）
+        this.fireworksDuration = 2500; // 毫秒，烟花持续时长（增加到2.5秒）
         this.lastFireworkSpawn = 0;
         this.fireworkSpawnInterval = 1500; // 每隔多少ms产生一次烟花（大幅减少频率）
         this.fireworkParticles = [];
-        this.fireworksDensity = 3; // 粒子密度基数（极简）
+        this.fireworksDensity = 5; // 粒子密度基数（极简）
+        this.fireworksShape = 'random'; // 烟花图案：random, circle, heart, star, burst
         this.fireworkRockets = []; // 底部发射的火箭列表（每个在空中爆炸为粒子）
         this.fireworkRings = []; // 空中扩展的环形爆炸效果
 
@@ -52,8 +54,9 @@ class DynamicRanking {
         this.starParticles = []; // 星光粒子
         
         // 背景色参数
-        this.backgroundColor = 'dark'; // 默认背景色主题
+        this.backgroundColor = 'blue'; // 默认背景色主题
         this.backgroundThemes = {
+            none: { name: '无主题', gradient: ['transparent', 'transparent'] },
             dark: { name: '深色科技', gradient: ['#1a202c', '#2d3748'] },
             blue: { name: '科技蓝', gradient: ['#0f172a', '#1e3a8a'] },
             purple: { name: '科技紫', gradient: ['#1e0f2a', '#4c1d95'] },
@@ -177,21 +180,24 @@ class DynamicRanking {
      * 切换背景色主题
      */
     changeBackgroundColor(theme) {
-        if (this.backgroundThemes[theme]) {
+        if (theme === 'none') {
+            this.bgThemeEnabled = false;
+        } else if (this.backgroundThemes[theme]) {
             this.backgroundColor = theme;
+            this.bgThemeEnabled = true;
             console.log(`背景色已切换为: ${this.backgroundThemes[theme].name}`);
-            
-            // 如果正在预览或录制，重新绘制Canvas
-            if (this.isRecording || this.isPreview) {
-                this.clearCanvas();
-                this.drawTitle();
-                // 重新绘制所有项目
-                this.animationItems.forEach(item => {
-                    if (item.animate) {
-                        this.drawItem(item, performance.now());
-                    }
-                });
-            }
+        }
+        
+        // 如果正在预览或录制，重新绘制Canvas
+        if (this.isRecording || this.isPreview) {
+            this.clearCanvas();
+            this.drawTitle();
+            // 重新绘制所有项目
+            this.animationItems.forEach(item => {
+                if (item.animate) {
+                    this.drawItem(item, performance.now());
+                }
+            });
         }
     }
 
@@ -261,10 +267,40 @@ class DynamicRanking {
                 item.opacity = 0.5 + valueRatio * 0.5;
             });
 
+            // 动态更新烟花触发名次下拉框
+            this.updateFireworkTriggerOptions(items.length);
+
             return items;
         } catch (error) {
             this.showError('JSON解析错误: ' + error.message);
             return [];
+        }
+    }
+
+    /**
+     * 动态更新烟花触发名次下拉框选项
+     */
+    updateFireworkTriggerOptions(itemCount) {
+        if (!this.fireworksTriggerRankSelect) return;
+        
+        const currentValue = this.fireworksTriggerRankSelect.value;
+        this.fireworksTriggerRankSelect.innerHTML = '';
+        
+        for (let i = 1; i <= itemCount; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = `第${i}名`;
+            this.fireworksTriggerRankSelect.appendChild(option);
+        }
+        
+        // 尝试恢复之前选中的值，如果没有则默认选第3名（如果存在）
+        if (currentValue && parseInt(currentValue) <= itemCount) {
+            this.fireworksTriggerRankSelect.value = currentValue;
+        } else {
+            // 默认选第3名（index 2），如果项数不足3则选最后一名
+            const defaultRank = Math.min(3, itemCount);
+            this.fireworksTriggerRankSelect.value = defaultRank;
+            this.fireworksTriggerRank = defaultRank;
         }
     }
 
@@ -292,19 +328,31 @@ class DynamicRanking {
         this.canvas = document.getElementById('ranking-canvas');
 
         // 新增：烟花控制元素
-        this.fireworksEnableInput = document.getElementById('fireworks-enable');
+        this.fireworksEnableRadios = document.getElementsByName('fireworks-enable');
+        this.fireworksConfigContainer = document.getElementById('fireworks-config-container');
+        this.fireworksTriggerRankSelect = document.getElementById('fireworks-trigger-rank');
+        this.fireworksDensityInput = document.getElementById('fireworks-density');
+        this.fireworksDensityDisplay = document.getElementById('fireworks-density-display');
+        this.fireworksShapeSelect = document.getElementById('fireworks-shape');
+
+        // 初始化烟花配置面板显示状态
+        if (this.fireworksEnableRadios.length > 0 && this.fireworksConfigContainer) {
+            const checkedRadio = Array.from(this.fireworksEnableRadios).find(r => r.checked);
+            const isEnabled = checkedRadio ? checkedRadio.value === 'on' : true;
+            this.fireworksConfigContainer.style.display = isEnabled ? 'block' : 'none';
+        }
         
         // 新增：背景图控件与 DOM 预览元素
         this.bgImageInput = document.getElementById('bg-image-input');
+        this.clearBgImageBtn = document.getElementById('clear-bg-image');
         this.bgOpacityInput = document.getElementById('bg-opacity');
         this.rankingBgImageEl = document.getElementById('ranking-bg-image');
         // 新增：数值显示设置
-        this.showValuesRadios = document.getElementsByName('show-values');
         this.valuePositionRadios = document.getElementsByName('value-position');
         this.valueOffsetContainer = document.getElementById('value-offset-container');
         this.valueOffsetInput = document.getElementById('value-offset');
-        this.valueOffsetText = document.getElementById('value-offset-text');
-        this.barTextColorInput = document.getElementById('bar-text-color');
+        this.valueOffsetDisplay = document.getElementById('value-offset-display');
+        this.valueColorInput = document.getElementById('value-color-input');
         
         // 新增：背景主题启用设置
         this.bgThemeEnableRadios = document.getElementsByName('bg-theme-enable');
@@ -317,6 +365,11 @@ class DynamicRanking {
      */
     initEventListeners() {
         // Tab切换
+        document.querySelectorAll('.tab-item').forEach(button => {
+            button.addEventListener('click', (e) => this.handleSettingsTabSwitch(e));
+        });
+
+        // 原有的数据 Tab 切换
         document.querySelectorAll('.tab-button').forEach(button => {
             button.addEventListener('click', (e) => this.handleTabSwitch(e));
         });
@@ -338,6 +391,25 @@ class DynamicRanking {
                 } catch (err) {
                     console.error('背景图选择处理失败', err);
                     this.showError('背景图选择失败: ' + (err && err.message ? err.message : err));
+                }
+            });
+        }
+
+        // 清除背景图
+        if (this.clearBgImageBtn) {
+            this.clearBgImageBtn.addEventListener('click', () => {
+                if (this.bgImageInput) this.bgImageInput.value = '';
+                this.bgImageUrl = null;
+                this.bgImageObj = null;
+                if (this.rankingBgImageEl) {
+                    this.rankingBgImageEl.src = '';
+                    this.rankingBgImageEl.style.display = 'none';
+                }
+                console.log('背景图已清除');
+                
+                // 如果正在预览或播放，重新绘制
+                if (this.isPreview || this.isRecording) {
+                    this.draw();
                 }
             });
         }
@@ -410,12 +482,17 @@ class DynamicRanking {
             const updateVisibility = (value) => {
                 this.valuePosition = value;
                 if (this.valueOffsetContainer) {
-                    this.valueOffsetContainer.style.display = (value === 'after-bar') ? 'flex' : 'none';
+                    this.valueOffsetContainer.style.display = (value === 'outside-bar') ? 'flex' : 'none';
+                }
+                
+                // 实时预览更新
+                if (this.isPreview || this.isRecording) {
+                    this.draw();
                 }
             };
 
             // 初始化值
-            let initialValue = 'bar-end';
+            let initialValue = 'inside-bar';
             this.valuePositionRadios.forEach(radio => {
                 if (radio.checked) initialValue = radio.value;
                 radio.addEventListener('change', (e) => {
@@ -424,27 +501,37 @@ class DynamicRanking {
             });
             updateVisibility(initialValue);
         } else {
-            this.valuePosition = 'bar-end';
+            this.valuePosition = 'inside-bar';
         }
 
          // 数值偏移量设置
          if (this.valueOffsetInput) {
-             this.valueOffset = parseInt(this.valueOffsetInput.value) || 25;
-             if (this.valueOffsetText) this.valueOffsetText.textContent = this.valueOffset + 'px';
+             this.valueOffset = parseInt(this.valueOffsetInput.value) || 10;
+             if (this.valueOffsetDisplay) this.valueOffsetDisplay.textContent = this.valueOffset + 'px';
              this.valueOffsetInput.addEventListener('input', (e) => {
                  this.valueOffset = parseInt(e.target.value) || 0;
-                 if (this.valueOffsetText) this.valueOffsetText.textContent = this.valueOffset + 'px';
+                 if (this.valueOffsetDisplay) this.valueOffsetDisplay.textContent = this.valueOffset + 'px';
+                 
+                 // 实时预览更新
+                 if (this.isPreview || this.isRecording) {
+                     this.draw();
+                 }
              });
          }
 
-        // 文字颜色设置
-        if (this.barTextColorInput) {
-            this.barTextColor = this.barTextColorInput.value || '#ffffff';
-            this.barTextColorInput.addEventListener('input', (e) => {
-                this.barTextColor = e.target.value;
+        // 数值颜色设置
+        if (this.valueColorInput) {
+            this.valueColor = this.valueColorInput.value || '#ffffff';
+            this.valueColorInput.addEventListener('input', (e) => {
+                this.valueColor = e.target.value;
+                
+                // 实时预览更新
+                if (this.isPreview || this.isRecording) {
+                    this.draw();
+                }
             });
         } else {
-            this.barTextColor = '#ffffff';
+            this.valueColor = '#ffffff';
         }
 
         // 背景主题启用设置
@@ -506,21 +593,38 @@ class DynamicRanking {
         }
 
         // 烟花控件事件（若存在）
-        if (this.fireworksEnableInput) {
-            this.fireworksEnableInput.addEventListener('change', () => {
-                this.fireworksEnabled = !!this.fireworksEnableInput.checked;
+        if (this.fireworksEnableRadios.length > 0) {
+            this.fireworksEnableRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    const isEnabled = radio.value === 'on';
+                    this.fireworksEnabled = isEnabled;
+                    if (this.fireworksConfigContainer) {
+                        this.fireworksConfigContainer.style.display = isEnabled ? 'block' : 'none';
+                    }
+                });
             });
         }
-        if (this.fireworksDurationInput) {
-            this.fireworksDurationInput.addEventListener('change', () => {
-                const v = parseFloat(this.fireworksDurationInput.value);
-                if (!isNaN(v) && v > 0) this.fireworksDuration = v * 1000;
+        if (this.fireworksTriggerRankSelect) {
+            this.fireworksTriggerRankSelect.addEventListener('change', () => {
+                this.fireworksTriggerRank = parseInt(this.fireworksTriggerRankSelect.value) || 3;
             });
         }
         if (this.fireworksDensityInput) {
-            this.fireworksDensityInput.addEventListener('change', () => {
+            this.fireworksDensityInput.addEventListener('input', () => {
                 const v = parseInt(this.fireworksDensityInput.value);
-                if (!isNaN(v) && v > 0) this.fireworksDensity = v;
+                if (!isNaN(v)) {
+                    this.fireworksDensity = v;
+                    if (this.fireworksDensityDisplay) {
+                        this.fireworksDensityDisplay.textContent = v;
+                    }
+                    // 根据密度动态调整发射间隔：密度 1(3000ms) -> 10(300ms)
+                    this.fireworkSpawnInterval = 3300 - (v * 300);
+                }
+            });
+        }
+        if (this.fireworksShapeSelect) {
+            this.fireworksShapeSelect.addEventListener('change', () => {
+                this.fireworksShape = this.fireworksShapeSelect.value;
             });
         }
         // 视觉参数监听
@@ -548,58 +652,6 @@ class DynamicRanking {
                 this.changeBackgroundColor(theme);
             });
         }
-
-
-
-        // 高级面板 折叠/展开
-        this.advancedToggleBtn = document.getElementById('advanced-toggle');
-        this.advancedContent = document.getElementById('advanced-content');
-        if (this.advancedToggleBtn && this.advancedContent) {
-            // restore state
-            const saved = localStorage.getItem('dynamicRanking.advancedOpen');
-            const open = saved === '1';
-            this.setAdvancedOpen(open, false);
-
-            this.advancedToggleBtn.addEventListener('click', () => {
-                const isOpen = this.advancedToggleBtn.getAttribute('aria-expanded') === 'true';
-                this.setAdvancedOpen(!isOpen, true);
-            });
-        }
-    }
-
-    setAdvancedOpen(open, animate = true) {
-        if (!this.advancedToggleBtn || !this.advancedContent) return;
-        this.advancedToggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-        this.advancedToggleBtn.textContent = open ? '收起' : '展开';
-        // animate with max-height
-        if (open) {
-            this.advancedContent.style.display = 'block';
-            const h = this.advancedContent.scrollHeight;
-            if (animate) {
-                this.advancedContent.style.maxHeight = '0px';
-                // trigger reflow
-                // eslint-disable-next-line no-unused-expressions
-                this.advancedContent.offsetHeight;
-                this.advancedContent.style.transition = 'max-height 260ms ease';
-            }
-            this.advancedContent.style.maxHeight = h + 'px';
-        } else {
-            if (animate) {
-                this.advancedContent.style.transition = 'max-height 260ms ease';
-                this.advancedContent.style.maxHeight = this.advancedContent.scrollHeight + 'px';
-                // trigger reflow
-                // eslint-disable-next-line no-unused-expressions
-                this.advancedContent.offsetHeight;
-                this.advancedContent.style.maxHeight = '0px';
-                setTimeout(() => {
-                    this.advancedContent.style.display = 'none';
-                }, 260);
-            } else {
-                this.advancedContent.style.maxHeight = '0px';
-                this.advancedContent.style.display = 'none';
-            }
-        }
-        localStorage.setItem('dynamicRanking.advancedOpen', open ? '1' : '0');
     }
 
     // 播放预览（不录制）
@@ -622,15 +674,18 @@ class DynamicRanking {
             this.fireworkRings = [];
 
             // 应用烟花设置
-            if (this.fireworksEnableInput) this.fireworksEnabled = !!this.fireworksEnableInput.checked;
-            if (this.fireworksDurationInput) {
-                const v = parseFloat(this.fireworksDurationInput.value);
-                if (!isNaN(v) && v > 0) this.fireworksDuration = v * 1000;
+            if (this.fireworksEnableRadios.length > 0) {
+                const checkedRadio = Array.from(this.fireworksEnableRadios).find(r => r.checked);
+                this.fireworksEnabled = checkedRadio ? checkedRadio.value === 'on' : true;
+            }
+            if (this.fireworksTriggerRankSelect) {
+                this.fireworksTriggerRank = parseInt(this.fireworksTriggerRankSelect.value) || 3;
             }
             if (this.fireworksDensityInput) {
-                const v = parseInt(this.fireworksDensityInput.value);
-                if (!isNaN(v) && v > 0) this.fireworksDensity = v;
+                this.fireworksDensity = parseInt(this.fireworksDensityInput.value) || 5;
+                this.fireworkSpawnInterval = 3300 - (this.fireworksDensity * 300);
             }
+            if (this.fireworksShapeSelect) this.fireworksShape = this.fireworksShapeSelect.value;
 
             this.recordedBlob = null;
             this.downloadButton.disabled = true;
@@ -691,6 +746,29 @@ class DynamicRanking {
             this.isPreview = false;
             this.rankingContainer.classList.remove('playing');
             this.unlockContainerSize();
+        }
+    }
+
+    /**
+     * 处理配置区域 Tab 切换
+     */
+    handleSettingsTabSwitch(e) {
+        const button = e.currentTarget;
+        const tabId = button.dataset.tab;
+
+        // 更新按钮状态
+        document.querySelectorAll('.tab-item').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        button.classList.add('active');
+
+        // 更新内容显示
+        document.querySelectorAll('.tab-pane').forEach(pane => {
+            pane.classList.remove('active');
+        });
+        const targetPane = document.getElementById(tabId);
+        if (targetPane) {
+            targetPane.classList.add('active');
         }
     }
 
@@ -850,8 +928,19 @@ class DynamicRanking {
             this.fireworkRings = [];
 
             // 读取并应用烟花设置（从 UI）
-            if (this.fireworksEnableInput) {
-                this.fireworksEnabled = !!this.fireworksEnableInput.checked;
+            if (this.fireworksEnableRadios.length > 0) {
+                const checkedRadio = Array.from(this.fireworksEnableRadios).find(r => r.checked);
+                this.fireworksEnabled = checkedRadio ? checkedRadio.value === 'on' : true;
+            }
+            if (this.fireworksTriggerRankSelect) {
+                this.fireworksTriggerRank = parseInt(this.fireworksTriggerRankSelect.value) || 3;
+            }
+            if (this.fireworksDensityInput) {
+                this.fireworksDensity = parseInt(this.fireworksDensityInput.value) || 5;
+                this.fireworkSpawnInterval = 3300 - (this.fireworksDensity * 300);
+            }
+            if (this.fireworksShapeSelect) {
+                this.fireworksShape = this.fireworksShapeSelect.value;
             }
 
             this.log(`fireworks enabled=${this.fireworksEnabled}`);
@@ -1359,24 +1448,25 @@ class DynamicRanking {
                 // 添加呼吸灯效果：全局背景光晕
                 this.drawBreathingEffect(currentTime);
 
-                // 新增：触发烟花逻辑改为在第1~第3名播放期间触发，并在三名全部完成后停止
+                // 新增：触发烟花逻辑改为在选定名次播放期间触发，并在全部完成后停止
                 try {
-                    const top3 = this.animationItems.filter(it => it.displayRank <= 3 && it._lastDrawPos);
-                    const top3Animating = top3.length > 0 && top3.some(it => it.animate);
-                    const top3AllDone = top3.length > 0 && top3.every(it => it.animate && (currentTime - it.startTime >= this.flyInDuration));
+                    const triggerRank = this.fireworksTriggerRank || 3;
+                    const triggerItems = this.animationItems.filter(it => it.displayRank <= triggerRank && it._lastDrawPos);
+                    const triggerItemsAnimating = triggerItems.length > 0 && triggerItems.some(it => it.animate);
+                    const triggerItemsAllDone = triggerItems.length > 0 && triggerItems.every(it => it.animate && (currentTime - it.startTime >= this.flyInDuration));
 
-                    // 在第1~第3名任一开始弹入时有概率启动烟花（只要用户启用）
+                    // 在选定名次任一开始弹入时有概率启动烟花（只要用户启用）
                     // 增加最小启动延迟，避免连续多次运行时立即触发烟花
                     const FIREWORKS_MIN_START_DELAY = 150; // ms
                     const FIREWORKS_CHANCE = 0.3; // 30%的概率触发烟花
-                    if (top3Animating && this.fireworksEnabled && !this.fireworksActive && 
+                    if (triggerItemsAnimating && this.fireworksEnabled && !this.fireworksActive && 
                         (currentTime - this.animationStartTime) > FIREWORKS_MIN_START_DELAY &&
                         Math.random() < FIREWORKS_CHANCE) {
                         this.startFireworks();
                     }
 
-                    // 在三名全部完成且没有未完成的火箭/粒子时停止烟花
-                    if (this.fireworksActive && top3AllDone && this.fireworkRockets.length === 0 && this.fireworkParticles.length === 0) {
+                    // 在选定名次全部完成且没有未完成的火箭/粒子时停止烟花
+                    if (this.fireworksActive && triggerItemsAllDone && this.fireworkRockets.length === 0 && this.fireworkParticles.length === 0) {
                         // 小缓冲，确保视觉完整
                         setTimeout(() => this.stopFireworks(), 300);
                     }
@@ -1901,7 +1991,7 @@ class DynamicRanking {
         }
 
         // 绘制排名
-        this.ctx.fillStyle = this.barTextColor || textColor;
+        this.ctx.fillStyle = '#ffffff';
         this.ctx.font = 'bold 18px -apple-system, sans-serif';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
@@ -1917,7 +2007,7 @@ class DynamicRanking {
         }
 
         // 绘制名称和数值
-        this.ctx.fillStyle = this.barTextColor || textColor;
+        this.ctx.fillStyle = '#ffffff';
         this.ctx.textAlign = 'left';
         this.ctx.font = '600 20px -apple-system, sans-serif';
         this.ctx.fillText(item.name, 55, y + itemHeight / 2);
@@ -1934,23 +2024,23 @@ class DynamicRanking {
         }
 
         // 数值绘制（根据设置决定位置和是否显示）
-        if (this.showValues) {
-            this.ctx.fillStyle = this.barTextColor || textColor;
+        if (this.showValues !== false) {
+            this.ctx.fillStyle = this.valueColor || '#ffffff';
             this.ctx.globalAlpha = 1.0; // 文字保持完全不透明，不受背景透明度影响
             this.ctx.font = '20px -apple-system, sans-serif';
             
             let valueX;
             // 特殊规则：前二名始终在条形图末端（内部），其他排名根据配置决定
             const isTop2 = item.displayRank <= 2;
-            const effectivePosition = isTop2 ? 'bar-end' : this.valuePosition;
+            const effectivePosition = isTop2 ? 'inside-bar' : this.valuePosition;
 
-            if (effectivePosition === 'after-bar') {
+            if (effectivePosition === 'outside-bar') {
                 this.ctx.textAlign = 'left';
                 // 仅在“条形图末端后”模式下使用配置的偏移量
-                valueX = 20 + barWidth + (this.valueOffset || 25);
+                valueX = 20 + barWidth + (this.valueOffset || 10);
             } else {
                 this.ctx.textAlign = 'right';
-                // “条形图末端”模式（及前三名）始终使用固定内部偏移 10px，完全不受滑块影响
+                // “条形图末端”模式（及前二名）始终使用固定内部偏移 10px，完全不受滑块影响
                 valueX = 20 + barWidth - 10;
             }
             
@@ -1962,9 +2052,9 @@ class DynamicRanking {
                 this.ctx.globalCompositeOperation = 'screen';
                 this.ctx.globalAlpha = 0.8; // 固定透明度
                 this.ctx.fillStyle = 'rgba(0, 255, 255, 0.7)';
-                this.ctx.fillText(item.value.toString(), valueX + (effectivePosition === 'after-bar' ? shift : -shift), y + itemHeight / 2 - 1);
+                this.ctx.fillText(item.value.toString(), valueX + (effectivePosition === 'outside-bar' ? shift : -shift), y + itemHeight / 2 - 1);
                 this.ctx.fillStyle = 'rgba(255, 0, 128, 0.6)';
-                this.ctx.fillText(item.value.toString(), valueX - (effectivePosition === 'after-bar' ? shift : -shift), y + itemHeight / 2 + 1);
+                this.ctx.fillText(item.value.toString(), valueX - (effectivePosition === 'outside-bar' ? shift : -shift), y + itemHeight / 2 + 1);
                 this.ctx.restore();
             }
         }
@@ -2156,28 +2246,75 @@ class DynamicRanking {
         });
     }
 
-    // 爆炸成粒子（更真实的烟花爆炸效果）
+    // 爆炸成粒子（支持多种图案和自定义密度）
     spawnExplosion(x, y, colors) {
-        const particleCount = 80 + Math.floor(Math.random() * 40); // 增加粒子数量
+        const densityMultiplier = (this.fireworksDensity || 5) / 5;
+        const particleCount = Math.floor((100 + Math.random() * 50) * densityMultiplier);
+        const shape = this.fireworksShape === 'random' ? 
+            ['circle', 'heart', 'star', 'burst'][Math.floor(Math.random() * 4)] : 
+            (this.fireworksShape || 'circle');
         
         for (let i = 0; i < particleCount; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const force = 2 + Math.random() * 6; // 初始爆炸力
+            let vx, vy;
+            const t = (i / particleCount) * Math.PI * 2;
             const color = colors[Math.floor(Math.random() * colors.length)];
+            const baseForce = (3 + Math.random() * 5) * (this.fireworksSpeedMul || 1);
+
+            if (shape === 'heart') {
+                // 心形公式: x = 16sin^3(t), y = 13cos(t) - 5cos(2t) - 2cos(3t) - cos(4t)
+                const force = baseForce * 0.4;
+                vx = 16 * Math.pow(Math.sin(t), 3) * force * 0.1;
+                vy = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * force * 0.1;
+                // 添加一点随机抖动使效果更自然
+                vx += (Math.random() - 0.5) * 0.5;
+                vy += (Math.random() - 0.5) * 0.5;
+            } else if (shape === 'star') {
+                // 星形: 五角星效果
+                const arms = 5;
+                const innerRadius = 0.5;
+                const rot = (Math.PI / 2) * 3;
+                const step = Math.PI / arms;
+                
+                // 模拟星形路径的速度分布
+                const angle = t;
+                const modStep = angle % (step * 2);
+                const r = modStep < step ? 
+                    1.0 - (modStep / step) * (1.0 - innerRadius) : 
+                    innerRadius + ((modStep - step) / step) * (1.0 - innerRadius);
+                
+                const force = baseForce * r;
+                vx = Math.cos(angle) * force;
+                vy = Math.sin(angle) * force;
+            } else if (shape === 'burst') {
+                // 爆炸散射: 多个射线方向
+                const rayCount = 8;
+                const rayAngle = Math.floor(t / (Math.PI * 2) * rayCount) * (Math.PI * 2 / rayCount);
+                const isRay = Math.random() > 0.3;
+                const force = isRay ? baseForce * 1.2 : baseForce * 0.5;
+                const angle = isRay ? rayAngle + (Math.random() - 0.5) * 0.1 : t;
+                vx = Math.cos(angle) * force;
+                vy = Math.sin(angle) * force;
+            } else {
+                // 经典圆形
+                const angle = Math.random() * Math.PI * 2;
+                const force = Math.random() * baseForce;
+                vx = Math.cos(angle) * force;
+                vy = Math.sin(angle) * force;
+            }
             
             this.fireworkParticles.push({
                 x: x,
                 y: y,
-                vx: Math.cos(angle) * force,
-                vy: Math.sin(angle) * force,
+                vx: vx,
+                vy: vy,
                 drag: 0.94 + Math.random() * 0.04, // 空气阻力
                 gravity: 0.12, // 重力
                 age: 0,
-                life: 1000 + Math.random() * 1000,
+                life: (800 + Math.random() * 1000) * (this.fireworksSpeedMul || 1),
                 size: 1.5 + Math.random() * 2,
                 color: color,
                 trail: [],
-                spark: Math.random() > 0.5 // 是否有闪烁火花效果
+                spark: Math.random() > 0.4 // 是否有闪烁火花效果
             });
         }
         
@@ -2185,7 +2322,7 @@ class DynamicRanking {
         this.fireworkRings.push({
             x, y,
             radius: 0,
-            maxRadius: 60,
+            maxRadius: 60 * densityMultiplier,
             age: 0,
             life: 200,
             color: '#FFFFFF',
@@ -2201,19 +2338,26 @@ class DynamicRanking {
         // 如果烟花激活且在持续期内，按间隔生成火箭朝前三名位置发射
         if (this.fireworksActive) {
             const elapsed = now - this.fireworksStartTime;
-            if (elapsed < this.fireworksDuration) {
+            // 烟花持续时间也随密度略微增加
+            const effectiveDuration = this.fireworksDuration * (1 + (this.fireworksDensity || 5) / 10);
+            if (elapsed < effectiveDuration) {
                 if (now - this.lastFireworkSpawn > this.fireworkSpawnInterval) {
-                    const top3 = this.animationItems.filter(it => it.displayRank <= 3 && it._lastDrawPos);
-                    if (top3.length > 0) {
-                        // 随机选择前三名中的一个发射火箭，而不是全部发射
-                        const randomIndex = Math.floor(Math.random() * top3.length);
-                        const posItem = top3[randomIndex];
-                        // 每次只发射1枚火箭
-                        this.spawnRocketTowards(posItem._lastDrawPos.x + (Math.random() - 0.5) * 20, posItem._lastDrawPos.y);
-                    } else {
-                        const rx = 100 + Math.random() * (this.canvasWidth - 200);
-                        const ry = 80 + Math.random() * (this.canvasHeight / 2);
-                        this.spawnRocketTowards(rx, ry);
+                    const triggerRank = this.fireworksTriggerRank || 3;
+                    const triggerItems = this.animationItems.filter(it => it.displayRank <= triggerRank && it._lastDrawPos);
+                    // 每次发射的火箭数量也随密度增加
+                    const rocketsToSpawn = Math.max(1, Math.floor((this.fireworksDensity || 5) / 3));
+                    
+                    for (let s = 0; s < rocketsToSpawn; s++) {
+                        if (triggerItems.length > 0) {
+                            // 随机选择触发名次中的一个发射火箭
+                            const randomIndex = Math.floor(Math.random() * triggerItems.length);
+                            const posItem = triggerItems[randomIndex];
+                            this.spawnRocketTowards(posItem._lastDrawPos.x + (Math.random() - 0.5) * 40, posItem._lastDrawPos.y);
+                        } else {
+                            const rx = 100 + Math.random() * (this.canvasWidth - 200);
+                            const ry = 80 + Math.random() * (this.canvasHeight / 2);
+                            this.spawnRocketTowards(rx, ry);
+                        }
                     }
                     this.lastFireworkSpawn = now;
                 }
