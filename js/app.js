@@ -11,6 +11,7 @@ class DynamicRanking {
         this.intervalDuration = 0.5; // 条形图间隔时间（秒）
         this.flyInDuration = 1000; // 条形图飞入时间（毫秒），默认1秒
         this.animationType = 'squeeze'; // 动画类型：squeeze, fade, slide, scale, flip, elevator
+        this.sortOrder = 'desc'; // 排序方式：desc (从大到小), asc (从小到大)
         this.valuePosition = 'bar-end'; // 数值位置：bar-end (末端内), after-bar (末端外)
         this.valueOffset = 25; // 数值偏移距离
         this.isRecording = false;
@@ -44,6 +45,18 @@ class DynamicRanking {
         this.fireworksShape = 'random'; // 烟花图案：random, circle, heart, star, burst
         this.fireworkRockets = []; // 底部发射的火箭列表（每个在空中爆炸为粒子）
         this.fireworkRings = []; // 空中扩展的环形爆炸效果
+
+        // 红包/福袋效果参数
+        this.redPacketsEnabled = false; // 是否开启随机红包
+        this.redPackets = []; // 红包对象列表
+        this.lastRedPacketSpawn = 0; // 上次生成红包的时间
+        this.redPacketSpawnInterval = 1000; // 红包生成间隔（毫秒）
+
+        // 花瓣特效相关参数
+        this.petalsEnabled = false;
+        this.petals = [];
+        this.lastPetalSpawn = 0;
+        this.petalSpawnInterval = 100; // 高频发射
 
         // 科技感效果参数
         this.techEnabled = true; // 是否启用科技感效果
@@ -254,19 +267,26 @@ class DynamicRanking {
                 return [];
             }
 
-            // 按值从小到大排序（第1名是最大值）
-            items.sort((a, b) => a.value - b.value);
+            // 根据排序方式进行排序（目标是让“冠军”排在最后，以实现最后弹出的动画效果）
+            if (this.sortOrder === 'asc') {
+                // 从小到大：数值越小排名越靠前，最小值是第1名，应该排在最后弹出
+                items.sort((a, b) => b.value - a.value);
+            } else {
+                // 从大到小：数值越大排名越靠前，最大值是第1名，应该排在最后弹出
+                items.sort((a, b) => a.value - b.value);
+            }
 
-            // 计算最大值和最小值用于透明度计算
-            const maxValue = items[items.length - 1].value;
-            const minValue = items[0].value;
+            // 计算所有数据中的最大值和最小值，用于视觉效果计算
+            const values = items.map(it => it.value);
+            const maxValue = Math.max(...values);
+            const minValue = Math.min(...values);
             const valueRange = maxValue - minValue || 1;
 
             // 为每个项目分配随机颜色和透明度
             items.forEach((item) => {
                 // 生成完全随机的颜色（每次运行都不一样）
                 item.color = this.generateRandomColor();
-                // 值越小透明度越高：0.5（最小值）到 1.0（最大值）
+                // 根据值在范围中的比例设置透明度：0.5 到 1.0
                 const valueRatio = (item.value - minValue) / valueRange;
                 item.opacity = 0.5 + valueRatio * 0.5;
             });
@@ -300,6 +320,7 @@ class DynamicRanking {
         // 尝试恢复之前选中的值，如果没有则默认选第3名（如果存在）
         if (currentValue && parseInt(currentValue) <= itemCount) {
             this.fireworksTriggerRankSelect.value = currentValue;
+            this.fireworksTriggerRank = parseInt(currentValue);
         } else {
             // 默认选第3名（index 2），如果项数不足3则选最后一名
             const defaultRank = Math.min(3, itemCount);
@@ -323,6 +344,9 @@ class DynamicRanking {
         this.titleSizeValue = document.getElementById('title-size-value');
         this.durationInput = document.getElementById('animation-duration');
         this.animationTypeSelect = document.getElementById('animation-type');
+        this.sortOrderRadios = document.getElementsByName('sort-order');
+        this.redPacketRadios = document.getElementsByName('red-packet-enable'); // 新增：红包开关
+        this.petalsRadios = document.getElementsByName('petals-enable'); // 新增：花瓣开关
         this.runButton = document.getElementById('run-animation');
         this.downloadButton = document.getElementById('download-video');
         this.rankingContent = document.getElementById('ranking-content');
@@ -586,6 +610,36 @@ class DynamicRanking {
         // 间隔时间输入
         if (this.durationInput) {
             this.durationInput.addEventListener('change', () => this.updateIntervalDuration());
+        }
+
+        // 排序方式设置
+        if (this.sortOrderRadios && this.sortOrderRadios.length > 0) {
+            this.sortOrderRadios.forEach(radio => {
+                if (radio.checked) this.sortOrder = radio.value;
+                radio.addEventListener('change', (e) => {
+                    if (e.target.checked) this.sortOrder = e.target.value;
+                });
+            });
+        }
+
+        // 红包开关设置
+        if (this.redPacketRadios && this.redPacketRadios.length > 0) {
+            this.redPacketRadios.forEach(radio => {
+                if (radio.checked) this.redPacketsEnabled = (radio.value === 'on');
+                radio.addEventListener('change', (e) => {
+                    if (e.target.checked) this.redPacketsEnabled = (e.target.value === 'on');
+                });
+            });
+        }
+
+        // 花瓣开关设置
+        if (this.petalsRadios && this.petalsRadios.length > 0) {
+            this.petalsRadios.forEach(radio => {
+                if (radio.checked) this.petalsEnabled = (radio.value === 'on');
+                radio.addEventListener('change', (e) => {
+                    if (e.target.checked) this.petalsEnabled = (e.target.value === 'on');
+                });
+            });
         }
 
         // 烟花控件事件（若存在）
@@ -1097,15 +1151,15 @@ class DynamicRanking {
         const maxCount = this.data.length;
         this.animationItems = [];
 
-        // 计算最大值（用于百分比）
-        const maxValue = this.data[maxCount - 1].value;
+        // 计算全局最大值（用于条形图百分比基准）
+        const maxValue = Math.max(...this.data.map(item => item.value));
 
         // 为每个项目设置动画参数
-        // 从第12名（最小值）开始，到第1名（最大值）结束
+        // 数组末尾的项目是“冠军”，将最后弹出
         for (let i = 0; i < maxCount; i++) {
             const item = this.data[i];
             const actualRank = i + 1; // 第12名是1，第1名是12（弹出顺序）
-            const displayRank = maxCount - i; // 实际排名：第1名是最大值
+            const displayRank = maxCount - i; // 实际排名：数组末尾的项目始终是第1名
             const percentage = (item.value / maxValue) * 100;
 
             // 根据动画类型设置初始状态
@@ -1500,6 +1554,14 @@ class DynamicRanking {
     async runCanvasAnimation() {
         return new Promise((resolve) => {
             this.animationStartTime = performance.now();
+            
+            // 重置红包状态
+            this.redPackets = [];
+            this.lastRedPacketSpawn = 0;
+
+            // 重置花瓣状态
+            this.petals = [];
+            this.lastPetalSpawn = 0;
 
             const animate = (currentTime) => {
                 // 如果既不是录制也不是预览模式，则停止动画
@@ -1561,9 +1623,15 @@ class DynamicRanking {
                 // 新增：触发烟花逻辑改为在选定名次播放期间触发，并在全部完成后停止
                 try {
                     const triggerRank = this.fireworksTriggerRank || 3;
-                    const triggerItems = this.animationItems.filter(it => it.displayRank <= triggerRank && it._lastDrawPos);
+                    // 所有符合触发条件的项目（包括还没开始动画的项目）
+                    const allPotentialTriggerItems = this.animationItems.filter(it => it.displayRank <= triggerRank);
+                    // 已经在绘制的项目中符合触发条件的
+                    const triggerItems = allPotentialTriggerItems.filter(it => it._lastDrawPos);
+                    
                     const triggerItemsAnimating = triggerItems.length > 0 && triggerItems.some(it => it.animate);
-                    const triggerItemsAllDone = triggerItems.length > 0 && triggerItems.every(it => it.animate && (currentTime - it.startTime >= this.flyInDuration));
+                    // 判定是否全部完成：所有潜在的触发项目都必须已动画且进度完成
+                    const triggerItemsAllDone = allPotentialTriggerItems.length > 0 && 
+                        allPotentialTriggerItems.every(it => it.animate && (currentTime - it.startTime >= this.flyInDuration));
 
                     // 在选定名次任一开始弹入时有概率启动烟花（只要用户启用）
                     // 增加最小启动延迟，避免连续多次运行时立即触发烟花
@@ -1586,6 +1654,12 @@ class DynamicRanking {
 
                 // 更新并绘制烟花（如果激活）
                 this.updateAndDrawFireworks(currentTime);
+
+                // 更新并绘制随机红包（如果开启）
+                this.updateAndDrawRedPackets(currentTime);
+
+                // 更新并绘制花瓣特效（如果开启）
+                this.updateAndDrawPetals(currentTime);
 
                 // 检查动画是否完成
                 const lastItem = this.animationItems[this.animationItems.length - 1];
@@ -2327,12 +2401,13 @@ class DynamicRanking {
         const startY = this.canvasHeight + 10;
         
         // 目标高度：在条形图上方随机位置爆炸
-        // 优化：名次越靠前，上升越高
-        let explosionY = targetY - (20 + Math.random() * 60);
+        // 优化：显著增加基础上升高度，让所有烟花都飞得更高
+        let explosionY = targetY - (150 + Math.random() * 100);
         
         // 名次加成：名次越小（越靠前），额外上升高度越高
-        if (rank <= 10) {
-            const heightBonus = (11 - rank) * 30; // 第一名额外上升 300px，第十名 30px
+        // 扩大加成范围到前 20 名，并增加加成力度
+        if (rank <= 20) {
+            const heightBonus = (21 - rank) * 20; // 第一名额外上升 400px，第二十名 20px
             explosionY -= heightBonus;
         }
         
@@ -2341,7 +2416,8 @@ class DynamicRanking {
         
         // 计算初始速度以到达目标高度（物理公式：v^2 = 2gh）
         const gravity = 0.0015; // 稍强的重力
-        const height = startY - explosionY;
+        // 安全检查：确保目标点在起点上方，否则至少保留 100px 的上升高度，防止 Math.sqrt(负数) 产生 NaN
+        const height = Math.max(100, startY - explosionY);
         const vy = -Math.sqrt(2 * gravity * height) * (0.9 + Math.random() * 0.2);
         
         // 计算水平速度
@@ -2749,6 +2825,291 @@ class DynamicRanking {
             this.rankingBgImageEl.style.display = 'none';
             this.rankingBgImageEl.src = '';
         }
+    }
+
+    /**
+     * 更新并绘制红包/福袋
+     */
+    updateAndDrawRedPackets(currentTime) {
+        if (!this.redPacketsEnabled || !this.ctx) return;
+
+        // 生成新红包
+        if (currentTime - this.lastRedPacketSpawn > this.redPacketSpawnInterval) {
+            // 每次生成 1-3 个
+            const count = 1 + Math.floor(Math.random() * 2);
+            for (let i = 0; i < count; i++) {
+                this.spawnRedPacket();
+            }
+            this.lastRedPacketSpawn = currentTime;
+        }
+
+        // 更新和绘制现有红包
+        for (let i = this.redPackets.length - 1; i >= 0; i--) {
+            const packet = this.redPackets[i];
+            
+            // 更新位置
+            packet.y += packet.speed;
+            packet.rotation += packet.rotationSpeed;
+            packet.x += Math.sin(currentTime * 0.002 + packet.id) * 0.5; // 轻微左右摇摆
+
+            // 移除超出屏幕的红包
+            if (packet.y > this.canvasHeight + 50) {
+                this.redPackets.splice(i, 1);
+                continue;
+            }
+
+            // 绘制
+            this.drawRedPacket(packet);
+        }
+    }
+
+    /**
+     * 生成单个红包/福袋/金币/元宝
+     */
+    spawnRedPacket() {
+        const x = Math.random() * this.canvasWidth;
+        const size = 30 + Math.random() * 20; // 30-50px
+        
+        // 随机选择类型：红包、福袋、金币、元宝
+        const rand = Math.random();
+        let type;
+        if (rand < 0.3) type = 'packet';      // 30% 红包
+        else if (rand < 0.5) type = 'bag';    // 20% 福袋
+        else if (rand < 0.8) type = 'coin';   // 30% 金币
+        else type = 'ingot';                  // 20% 元宝
+
+        this.redPackets.push({
+            id: Math.random(),
+            x: x,
+            y: -size - 10,
+            size: size,
+            speed: 1 + Math.random() * 2, // 1-3px/frame
+            rotation: (Math.random() - 0.5) * 0.5,
+            rotationSpeed: (Math.random() - 0.5) * 0.05,
+            type: type
+        });
+    }
+
+    /**
+     * 绘制单个红包/福袋/金币/元宝
+     */
+    drawRedPacket(packet) {
+        this.ctx.save();
+        this.ctx.translate(packet.x, packet.y);
+        this.ctx.rotate(packet.rotation);
+
+        if (packet.type === 'packet') {
+            // 绘制红包
+            const w = packet.size * 0.8;
+            const h = packet.size;
+            
+            // 红包主体
+            this.ctx.fillStyle = '#ff0000'; // 大红
+            this.ctx.beginPath();
+            // 兼容性写法，如果不支持 roundRect 则用 rect
+            if (this.ctx.roundRect) {
+                this.ctx.roundRect(-w/2, -h/2, w, h, 4);
+            } else {
+                this.ctx.rect(-w/2, -h/2, w, h);
+            }
+            this.ctx.fill();
+
+            // 红包盖子（曲线）
+            this.ctx.fillStyle = '#cc0000'; // 深红
+            this.ctx.beginPath();
+            this.ctx.moveTo(-w/2, -h/2 + h*0.3);
+            this.ctx.quadraticCurveTo(0, -h/2 + h*0.6, w/2, -h/2 + h*0.3);
+            this.ctx.lineTo(w/2, -h/2);
+            this.ctx.lineTo(-w/2, -h/2);
+            this.ctx.fill();
+
+            // "福"字或者金币
+            this.ctx.fillStyle = '#ffd700'; // 金色
+            this.ctx.beginPath();
+            this.ctx.arc(0, -h/2 + h*0.35, w*0.15, 0, Math.PI * 2);
+            this.ctx.fill();
+        } else if (packet.type === 'bag') {
+            // 绘制福袋
+            const s = packet.size;
+            
+            // 袋子主体
+            this.ctx.fillStyle = '#ff0000';
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, -s/2); // 结口
+            this.ctx.bezierCurveTo(-s/2, -s/4, -s/2, s/2, 0, s/2); // 左边
+            this.ctx.bezierCurveTo(s/2, s/2, s/2, -s/4, 0, -s/2); // 右边
+            this.ctx.fill();
+
+            // 金色系带
+            this.ctx.strokeStyle = '#ffd700';
+            this.ctx.lineWidth = 3;
+            this.ctx.beginPath();
+            this.ctx.moveTo(-s*0.2, -s*0.3);
+            this.ctx.lineTo(s*0.2, -s*0.3);
+            this.ctx.stroke();
+
+            // "福"字
+            this.ctx.fillStyle = '#ffd700';
+            this.ctx.font = `bold ${s*0.4}px "Microsoft YaHei", sans-serif`;
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText('福', 0, s*0.1);
+        } else if (packet.type === 'coin') {
+            // 绘制金币
+            const r = packet.size * 0.4;
+            
+            // 外圈
+            this.ctx.fillStyle = '#ffd700'; // 金色
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, r, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            // 内圈（方孔）
+            this.ctx.fillStyle = '#ffec8b'; // 浅金
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, r * 0.8, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            // 方孔
+            const hole = r * 0.3;
+            this.ctx.fillStyle = '#e6b800'; // 深金
+            this.ctx.beginPath();
+            this.ctx.rect(-hole/2, -hole/2, hole, hole);
+            this.ctx.fill();
+
+            // 边缘光泽
+            this.ctx.strokeStyle = '#fffacd'; // 柠檬绸色
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, r * 0.9, 0, Math.PI * 2);
+            this.ctx.stroke();
+        } else if (packet.type === 'ingot') {
+            // 绘制元宝
+            const w = packet.size * 0.8;
+            const h = packet.size * 0.5;
+            
+            // 元宝底部（船身）
+            this.ctx.fillStyle = '#ffd700';
+            this.ctx.beginPath();
+            this.ctx.moveTo(-w/2, 0);
+            this.ctx.quadraticCurveTo(0, h, w/2, 0); // 底部圆弧
+            this.ctx.lineTo(w*0.7, -h*0.5); // 右翼尖
+            this.ctx.quadraticCurveTo(w*0.3, 0, 0, -h*0.2); // 中间下凹
+            this.ctx.quadraticCurveTo(-w*0.3, 0, -w*0.7, -h*0.5); // 左翼尖
+            this.ctx.closePath();
+            this.ctx.fill();
+            
+            // 中间凸起
+            this.ctx.fillStyle = '#ffec8b';
+            this.ctx.beginPath();
+            this.ctx.ellipse(0, -h*0.1, w*0.25, h*0.25, 0, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+
+        this.ctx.restore();
+    }
+
+    /**
+     * 更新并绘制花瓣特效
+     */
+    updateAndDrawPetals(currentTime) {
+        if (!this.petalsEnabled || !this.ctx) return;
+
+        // 生成新花瓣
+        if (currentTime - this.lastPetalSpawn > this.petalSpawnInterval) {
+            // 每次生成 2-4 个
+            const count = 2 + Math.floor(Math.random() * 3);
+            for (let i = 0; i < count; i++) {
+                // 随机左右两侧
+                this.spawnPetal(Math.random() > 0.5 ? 'left' : 'right');
+            }
+            this.lastPetalSpawn = currentTime;
+        }
+
+        // 更新和绘制现有花瓣
+        for (let i = this.petals.length - 1; i >= 0; i--) {
+            const petal = this.petals[i];
+            
+            // 物理更新
+            petal.x += petal.vx;
+            petal.y += petal.vy;
+            petal.rotation += petal.rotationSpeed;
+            
+            // 重力与空气阻力模拟
+            petal.vy += 0.05; // 重力
+            petal.vx *= 0.99; // 水平阻力
+            
+            // 飘动效果
+            petal.x += Math.sin(currentTime * 0.003 + petal.id) * 0.5;
+
+            // 移除超出屏幕的花瓣
+            if (petal.y > this.canvasHeight + 50 || petal.x < -50 || petal.x > this.canvasWidth + 50) {
+                this.petals.splice(i, 1);
+                continue;
+            }
+
+            // 绘制
+            this.drawPetal(petal);
+        }
+    }
+
+    /**
+     * 生成单个花瓣
+     * @param {string} side 'left' or 'right'
+     */
+    spawnPetal(side) {
+        const y = this.canvasHeight * 0.2 + Math.random() * (this.canvasHeight * 0.6); // 中间区域发射
+        let x, vx;
+        
+        if (side === 'left') {
+            x = -10;
+            vx = 2 + Math.random() * 3; // 向右飞
+        } else {
+            x = this.canvasWidth + 10;
+            vx = -(2 + Math.random() * 3); // 向左飞
+        }
+
+        // 随机颜色：粉色系
+        const colors = ['#ffc0cb', '#ffb6c1', '#ff69b4', '#ff1493', '#db7093', '#fff0f5'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+        this.petals.push({
+            id: Math.random(),
+            x: x,
+            y: y,
+            vx: vx,
+            vy: -1 - Math.random() * 2, // 初始向上飞一点
+            size: 5 + Math.random() * 8, // 大小
+            color: color,
+            rotation: Math.random() * Math.PI * 2,
+            rotationSpeed: (Math.random() - 0.5) * 0.1,
+            shapeRatio: 0.5 + Math.random() * 0.5 // 形状长宽比
+        });
+    }
+
+    /**
+     * 绘制单个花瓣
+     */
+    drawPetal(petal) {
+        this.ctx.save();
+        this.ctx.translate(petal.x, petal.y);
+        this.ctx.rotate(petal.rotation);
+        
+        this.ctx.fillStyle = petal.color;
+        this.ctx.globalAlpha = 0.8;
+
+        this.ctx.beginPath();
+        // 绘制花瓣形状 (二次贝塞尔曲线)
+        // 从 (0, -size) 到 (0, size)，控制点决定宽度
+        const s = petal.size;
+        const w = s * petal.shapeRatio;
+        
+        this.ctx.moveTo(0, -s);
+        this.ctx.quadraticCurveTo(w, 0, 0, s);
+        this.ctx.quadraticCurveTo(-w, 0, 0, -s);
+        
+        this.ctx.fill();
+        this.ctx.restore();
     }
 }
 
