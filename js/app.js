@@ -57,6 +57,15 @@ class DynamicRanking {
         this.petals = [];
         this.lastPetalSpawn = 0;
         this.petalSpawnInterval = 100; // 高频发射
+        
+        // 弹幕相关参数
+        this.danmakuEnabled = false; // 默认不开启弹幕
+        this.danmakuColor = '#ffffff'; // 默认弹幕颜色
+        this.danmakuSize = 20; // 默认字体大小
+        this.danmakuContent = '太棒了 恭喜 加油 优秀 厉害'; // 默认弹幕内容，使用空格分隔
+        this.danmakuList = []; // 弹幕列表
+        this.lastDanmakuSpawn = 0;
+        this.danmakuSpawnInterval = 2000; // 弹幕生成间隔
 
         // 科技感效果参数
         this.techEnabled = true; // 是否启用科技感效果
@@ -383,6 +392,13 @@ class DynamicRanking {
         // 新增：背景主题启用设置
         this.bgThemeEnableRadios = document.getElementsByName('bg-theme-enable');
         this.bgThemeSelectContainer = document.getElementById('bg-theme-select-container');
+        
+        // 新增：弹幕设置
+        this.danmakuEnableRadios = document.getElementsByName('danmaku-enable');
+        this.danmakuColorInput = document.getElementById('danmaku-color-input');
+        this.danmakuSizeInput = document.getElementById('danmaku-size-input');
+        this.danmakuSizeValue = document.getElementById('danmaku-size-value');
+        this.danmakuContentInput = document.getElementById('danmaku-content');
     }
 
 
@@ -700,6 +716,40 @@ class DynamicRanking {
             this.backgroundThemeSelect.addEventListener('change', (e) => {
                 const theme = e.target.value;
                 this.changeBackgroundColor(theme);
+            });
+        }
+        
+        // 弹幕设置
+        if (this.danmakuEnableRadios && this.danmakuEnableRadios.length > 0) {
+            this.danmakuEnableRadios.forEach(radio => {
+                if (radio.checked) this.danmakuEnabled = (radio.value === 'on');
+                radio.addEventListener('change', (e) => {
+                    if (e.target.checked) this.danmakuEnabled = (e.target.value === 'on');
+                });
+            });
+        }
+        
+        if (this.danmakuColorInput) {
+            this.danmakuColor = this.danmakuColorInput.value || '#ffffff';
+            this.danmakuColorInput.addEventListener('input', (e) => {
+                this.danmakuColor = e.target.value || '#ffffff';
+            });
+        }
+        
+        if (this.danmakuSizeInput && this.danmakuSizeValue) {
+            this.danmakuSize = parseInt(this.danmakuSizeInput.value) || 20;
+            this.danmakuSizeValue.textContent = this.danmakuSize + 'px';
+            
+            this.danmakuSizeInput.addEventListener('input', (e) => {
+                this.danmakuSize = parseInt(e.target.value) || 20;
+                this.danmakuSizeValue.textContent = this.danmakuSize + 'px';
+            });
+        }
+        
+        if (this.danmakuContentInput) {
+            this.danmakuContent = this.danmakuContentInput.value || '太棒了,恭喜,加油,优秀,厉害';
+            this.danmakuContentInput.addEventListener('input', (e) => {
+                this.danmakuContent = e.target.value || '太棒了,恭喜,加油,优秀,厉害';
             });
         }
     }
@@ -1562,6 +1612,10 @@ class DynamicRanking {
             // 重置花瓣状态
             this.petals = [];
             this.lastPetalSpawn = 0;
+            
+            // 重置弹幕状态
+            this.danmakuList = [];
+            this.lastDanmakuSpawn = 0;
 
             const animate = (currentTime) => {
                 // 如果既不是录制也不是预览模式，则停止动画
@@ -1660,6 +1714,9 @@ class DynamicRanking {
 
                 // 更新并绘制花瓣特效（如果开启）
                 this.updateAndDrawPetals(currentTime);
+                
+                // 更新并绘制弹幕（如果开启）
+                this.updateAndDrawDanmaku(currentTime);
 
                 // 检查动画是否完成
                 const lastItem = this.animationItems[this.animationItems.length - 1];
@@ -3109,6 +3166,92 @@ class DynamicRanking {
         this.ctx.quadraticCurveTo(-w, 0, 0, -s);
         
         this.ctx.fill();
+        this.ctx.restore();
+    }
+    
+    /**
+     * 更新并绘制弹幕
+     */
+    updateAndDrawDanmaku(currentTime) {
+        if (!this.danmakuEnabled || !this.ctx) return;
+
+        // 生成新弹幕
+        if (currentTime - this.lastDanmakuSpawn > this.danmakuSpawnInterval) {
+            this.spawnDanmaku();
+            this.lastDanmakuSpawn = currentTime;
+        }
+
+        // 更新和绘制现有弹幕
+        for (let i = this.danmakuList.length - 1; i >= 0; i--) {
+            const danmaku = this.danmakuList[i];
+            
+            // 更新位置
+            danmaku.x += danmaku.speed;
+            
+            // 实现轮播效果：当弹幕超出屏幕右侧时，重新从左侧进入
+            if (danmaku.x > this.canvasWidth + 100) {
+                // 重新定位到左侧，并随机选择新的弹幕内容，使用空格分隔
+                const danmakuTexts = this.danmakuContent.split(' ').map(text => text.trim()).filter(text => text.length > 0);
+                if (danmakuTexts.length > 0) {
+                    danmaku.text = danmakuTexts[Math.floor(Math.random() * danmakuTexts.length)];
+                }
+                danmaku.x = -200; // 重新从左侧外进入
+                danmaku.y = 50 + Math.random() * (this.canvasHeight - 100); // 随机垂直位置
+                danmaku.speed = 0.5 + Math.random() * 1; // 随机速度
+                continue;
+            }
+
+            // 绘制弹幕
+            this.drawDanmaku(danmaku);
+        }
+    }
+    
+    /**
+     * 生成单个弹幕
+     */
+    spawnDanmaku() {
+        // 解析弹幕内容，使用空格分隔
+        const danmakuTexts = this.danmakuContent.split(' ').map(text => text.trim()).filter(text => text.length > 0);
+        if (danmakuTexts.length === 0) return;
+        
+        // 随机选择一条弹幕内容
+        const text = danmakuTexts[Math.floor(Math.random() * danmakuTexts.length)];
+        
+        // 随机生成弹幕的垂直位置和速度
+        const y = 50 + Math.random() * (this.canvasHeight - 100);
+        const speed = 0.5 + Math.random() * 1; // 0.5-1.5px/frame，降低速度
+        
+        this.danmakuList.push({
+            id: Math.random(),
+            text: text,
+            x: -200, // 从屏幕左侧外进入
+            y: y,
+            speed: speed,
+            color: this.danmakuColor,
+            size: this.danmakuSize
+        });
+    }
+    
+    /**
+     * 绘制单个弹幕
+     */
+    drawDanmaku(danmaku) {
+        this.ctx.save();
+        
+        // 设置字体和颜色
+        this.ctx.font = `${danmaku.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+        this.ctx.fillStyle = danmaku.color;
+        this.ctx.textAlign = 'left';
+        this.ctx.textBaseline = 'middle';
+        
+        // 添加文字阴影，增强可读性
+        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.shadowBlur = 5;
+        this.ctx.shadowOffsetY = 2;
+        
+        // 绘制弹幕文本
+        this.ctx.fillText(danmaku.text, danmaku.x, danmaku.y);
+        
         this.ctx.restore();
     }
 }

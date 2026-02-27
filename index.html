@@ -78,6 +78,10 @@
                         <span class="tab-icon">🔢</span>
                         <span class="tab-text">数值显示</span>
                     </button>
+                    <button class="tab-item" data-tab="danmaku-settings">
+                        <span class="tab-icon">💬</span>
+                        <span class="tab-text">弹幕设置</span>
+                    </button>
                 </div>
 
                 <!-- 配置内容 -->
@@ -249,6 +253,35 @@
                                 <div class="checkbox-group">
                                     <label><input type="checkbox" id="non-top-two-outside" checked> 条形外仅影响非前两名</label>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 6. 弹幕设置 -->
+                    <div class="tab-pane" id="danmaku-settings">
+                        <div class="settings-header">弹幕设置</div>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label>启用弹幕</label>
+                                <div class="radio-group">
+                                    <label><input type="radio" name="danmaku-enable" value="on"> 开启</label>
+                                    <label><input type="radio" name="danmaku-enable" value="off" checked> 关闭</label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <label for="danmaku-color-input">弹幕颜色</label>
+                                <input type="color" id="danmaku-color-input" value="#ffffff">
+                            </div>
+                            <div class="setting-item">
+                                <label for="danmaku-size-input">字体大小</label>
+                                <div class="range-with-value">
+                                    <input type="range" id="danmaku-size-input" min="12" max="36" value="20">
+                                    <span id="danmaku-size-value">20px</span>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <label for="danmaku-content">弹幕内容</label>
+                                <input type="text" id="danmaku-content" placeholder="输入弹幕内容，用空格分隔多个弹幕" value="太棒了 恭喜 加油 优秀 厉害">
                             </div>
                         </div>
                     </div>

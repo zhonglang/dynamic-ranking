@@ -133,22 +133,24 @@ body {
     border-bottom: 1px solid var(--border-color);
     display: flex;
     flex-direction: row;
-    padding: 0 12px;
-    gap: 8px;
+    padding: 0 8px;
+    gap: 4px;
+    overflow-x: hidden;
+    white-space: nowrap;
 }
 
 .tab-item {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 14px 20px;
+    gap: 6px;
+    padding: 12px 16px;
     border: none;
     background: transparent;
     color: var(--text-muted);
     cursor: pointer;
     transition: var(--transition);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     position: relative;
     white-space: nowrap;
