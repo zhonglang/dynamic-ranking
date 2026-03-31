@@ -11,8 +11,9 @@ class DynamicRanking {
         this.intervalDuration = 0.5; // 条形图间隔时间（秒）
         this.flyInDuration = 1000; // 条形图飞入时间（毫秒），默认1秒
         this.animationType = 'squeeze'; // 动画类型：squeeze, fade, slide, scale, flip, elevator
-        this.sortOrder = 'desc'; // 排序方式：desc (从大到小), asc (从小到大)
-        this.valuePosition = 'bar-end'; // 数值位置：bar-end (末端内), after-bar (末端外)
+        this.sortOrder = 'asc'; // 排序方式：desc (从大到小), asc (从小到大)
+        this.valuePosition = 'outside-bar'; // 数值位置：bar-end (末端内), after-bar (末端外)
+        this.nameSize = 20; // 默认名称字体大小
         this.valueOffset = 25; // 数值偏移距离
         this.isRecording = false;
         this.mediaRecorder = null;
@@ -23,6 +24,7 @@ class DynamicRanking {
         this.ctx = null;
         this.animationItems = []; // 存储带动画状态的项目
         this.animationStartTime = 0;
+        this.animationFrameId = null; // 用于存储 requestAnimationFrame 的 ID
         this.initElements();
         this.initEventListeners();
 
@@ -57,11 +59,18 @@ class DynamicRanking {
         this.petals = [];
         this.lastPetalSpawn = 0;
         this.petalSpawnInterval = 100; // 高频发射
+        this.heartsEnabled = false;
+        this.hearts = [];
+        this.lastHeartSpawn = 0;
+        this.heartSpawnInterval = 520;
         
         // 弹幕相关参数
         this.danmakuEnabled = false; // 默认不开启弹幕
         this.danmakuColor = '#ffffff'; // 默认弹幕颜色
-        this.danmakuSize = 20; // 默认字体大小
+        this.danmakuSize = 15; // 默认字体大小
+        this.danmakuBold = true; // 是否加粗
+        this.danmakuItalic = false; // 是否倾斜
+        this.danmakuUnderline = false; // 是否下划线
         this.danmakuContent = '太棒了 恭喜 加油 优秀 厉害'; // 默认弹幕内容，使用空格分隔
         this.danmakuList = []; // 弹幕列表
         this.lastDanmakuSpawn = 0;
@@ -78,19 +87,77 @@ class DynamicRanking {
         // 背景色参数
         this.backgroundColor = 'blue'; // 默认背景色主题
         this.backgroundThemes = {
-            none: { name: '无主题', gradient: ['transparent', 'transparent'] },
-            dark: { name: '深色科技', gradient: ['#1a202c', '#2d3748'] },
-            blue: { name: '科技蓝', gradient: ['#0f172a', '#1e3a8a'] },
-            purple: { name: '科技紫', gradient: ['#1e0f2a', '#4c1d95'] },
-            green: { name: '科技绿', gradient: ['#0f1a1a', '#065f46'] },
-            red: { name: '科技红', gradient: ['#1a0f0f', '#991b1b'] },
-            cyber: { name: '赛博朋克', gradient: ['#0f0f1a', '#4c1d95'] },
-            space: { name: '太空深蓝', gradient: ['#0a0a1a', '#1e40af'] },
-            matrix: { name: '矩阵网格', gradient: ['#000500', '#001a00'] },
-            circuit: { name: '电子电路', gradient: ['#050a15', '#0a1e3c'] },
-            blueprint: { name: '蓝图设计', gradient: ['#001a33', '#003366'] },
-            nebula: { name: '深邃星云', gradient: ['#050010', '#150025'] }
+            none: { name: '无主题', gradient: ['transparent', 'transparent'], type: 'none' },
+            dark: { name: '深色科技', gradient: ['#1a202c', '#2d3748'], type: 'dynamic', effect: 'stars' },
+            blue: { name: '科技蓝', gradient: ['#0f172a', '#1e3a8a'], type: 'dynamic', effect: 'grid' },
+            purple: { name: '科技紫', gradient: ['#1e0f2a', '#4c1d95'], type: 'dynamic', effect: 'particles' },
+            green: { name: '科技绿', gradient: ['#0f1a1a', '#065f46'], type: 'dynamic', effect: 'digital-rain' },
+            red: { name: '科技红', gradient: ['#1a0f0f', '#991b1b'], type: 'dynamic', effect: 'energy' },
+            cyan: { name: '青色', gradient: ['#0d1a1a', '#06b6d4'], type: 'dynamic', effect: 'grid' },
+            rose: { name: '玫瑰色', gradient: ['#1a0d15', '#e11d48'], type: 'dynamic', effect: 'stars' },
+            orange: { name: '橙色', gradient: ['#1a0d0d', '#f97316'], type: 'dynamic', effect: 'particles' },
+            yellow: { name: '黄色', gradient: ['#1a1a0d', '#eab308'], type: 'dynamic', effect: 'grid' },
+            silver: { name: '银色', gradient: ['#1a1a1a', '#94a3b8'], type: 'dynamic', effect: 'stars' },
+            matrix: { name: '矩阵网格 (静态)', gradient: ['#000500', '#001a00'], type: 'static', effect: 'matrix' },
+            circuit: { name: '电子电路 (静态)', gradient: ['#050a15', '#0a1e3c'], type: 'static', effect: 'circuit' },
+            blueprint: { name: '蓝图设计 (静态)', gradient: ['#001a33', '#003366'], type: 'static', effect: 'blueprint' },
+            nebula: { name: '深邃星云 (静态)', gradient: ['#050010', '#150025'], type: 'static', effect: 'nebula' },
+            hexagon: { name: '六边形蜂巢 (静态)', gradient: ['#0a0a1a', '#1a1a3a'], type: 'static', effect: 'hexagon' },
+            radar: { name: '雷达扫描 (动态)', gradient: ['#0a0a0a', '#1a2a1a'], type: 'dynamic', effect: 'radar' },
+            cybergrid: { name: '赛博网格 (静态)', gradient: ['#0a0a1a', '#3a1a3a'], type: 'static', effect: 'cyber-grid' },
+            techchip: { name: '芯片电路 (静态)', gradient: ['#0a0a1a', '#1a2a3a'], type: 'static', effect: 'circuit' },
+            neonlines: { name: '霓虹线条 (静态)', gradient: ['#0a0a1a', '#2a1a3a'], type: 'static', effect: 'neon-lines' },
+            perspective: { name: '透视网格 (静态)', gradient: ['#050a1a', '#152a3a'], type: 'static', effect: 'perspective' },
+            deepsea: { name: '深海科技 (动态)', gradient: ['#000510', '#001a3a'], type: 'dynamic', effect: 'pulse' },
+            spacestation: { name: '核心舱 (动态)', gradient: ['#1c1c1c', '#3d3d3d'], type: 'dynamic', effect: 'scanlines' },
+            cyberpulse: { name: '赛博脉冲 (动态)', gradient: ['#120024', '#4a0082'], type: 'dynamic', effect: 'energy' },
+            datasequence: { name: '数据流 (动态)', gradient: ['#000800', '#001a00'], type: 'dynamic', effect: 'digital-rain' },
+            hologram: { name: '全息投影 (动态)', gradient: ['#001a1a', '#003333'], type: 'dynamic', effect: 'hologram' }
         };
+        
+        // 十二星座图标映射
+        this.zodiacSigns = {
+            '白羊座': '♈',
+            '金牛座': '♉',
+            '双子座': '♊',
+            '巨蟹座': '♋',
+            '狮子座': '♌',
+            '处女座': '♍',
+            '天秤座': '♎',
+            '天蝎座': '♏',
+            '射手座': '♐',
+            '摩羯座': '♑',
+            '水瓶座': '♒',
+            '双鱼座': '♓'
+        };
+        
+        // 星座图标显示控制（默认开启）
+        this.zodiacEnabled = true;
+        this.rankNumberEnabled = true;
+        this.rankNumberColorTheme = 'cyber-blue';
+        this.rankNumberThemePresets = {
+            'cyber-blue': { ring: 'rgba(0,255,255,0.5)', ringGlow: 'rgba(0,255,255,0.8)', texA: 'rgba(0,255,255,0.35)', texB: 'rgba(178,107,255,0.35)', g0: '#7CFDFF', g1: '#00E0FF', g2: '#0090FF', g3: '#2A00FF', glow: 'rgba(0,255,255,0.6)', outline: 'rgba(0,255,255,0.85)', halo: 'rgba(0,255,255,0.18)' },
+            'neon-pink': { ring: 'rgba(255,80,220,0.5)', ringGlow: 'rgba(255,80,220,0.85)', texA: 'rgba(255,80,220,0.35)', texB: 'rgba(120,70,255,0.35)', g0: '#FFD0FA', g1: '#FF70E6', g2: '#D14BFF', g3: '#5A26FF', glow: 'rgba(255,80,220,0.6)', outline: 'rgba(255,130,235,0.9)', halo: 'rgba(255,80,220,0.2)' },
+            'aurora-green': { ring: 'rgba(0,255,170,0.5)', ringGlow: 'rgba(0,255,170,0.85)', texA: 'rgba(0,255,170,0.35)', texB: 'rgba(0,180,255,0.35)', g0: '#D9FFF3', g1: '#44FFD0', g2: '#00E8A2', g3: '#0077C8', glow: 'rgba(0,255,170,0.6)', outline: 'rgba(70,255,200,0.9)', halo: 'rgba(0,255,170,0.2)' },
+            'golden-core': { ring: 'rgba(255,210,70,0.55)', ringGlow: 'rgba(255,210,70,0.9)', texA: 'rgba(255,210,70,0.35)', texB: 'rgba(255,130,30,0.3)', g0: '#FFF2B0', g1: '#FFD86B', g2: '#FFB536', g3: '#B36A00', glow: 'rgba(255,190,80,0.55)', outline: 'rgba(255,220,120,0.9)', halo: 'rgba(255,190,80,0.2)' },
+            'ice-silver': { ring: 'rgba(195,235,255,0.55)', ringGlow: 'rgba(210,245,255,0.9)', texA: 'rgba(220,245,255,0.35)', texB: 'rgba(130,180,220,0.3)', g0: '#FFFFFF', g1: '#E8F6FF', g2: '#BFDFFF', g3: '#7BA6D9', glow: 'rgba(190,230,255,0.55)', outline: 'rgba(230,250,255,0.95)', halo: 'rgba(200,235,255,0.2)' },
+            'lava-red': { ring: 'rgba(255,95,50,0.55)', ringGlow: 'rgba(255,120,60,0.9)', texA: 'rgba(255,110,70,0.35)', texB: 'rgba(255,180,70,0.3)', g0: '#FFE0C8', g1: '#FF9A4D', g2: '#FF5A2E', g3: '#B81500', glow: 'rgba(255,110,60,0.55)', outline: 'rgba(255,150,95,0.9)', halo: 'rgba(255,120,70,0.2)' }
+        };
+        this.rankNumberAnimDuration = 900;
+        this.rankNumberAnimStart = 0;
+        this._rankAnimLast = null;
+        
+        // 背景动画参数
+        this.radarAngle = 0;
+        this.radarSpeed = 0.02;
+
+        // 火箭飞行特效
+        this.rocketEnabled = false;
+        this.activeRockets = [];
+        this.rocketTriggered = false;
+        this.rocketLaunchCount = 0;
+        this.rocketWaveScheduled = false;
+        this._rocketSecondTimer = null;
         
         // 初始化科技感效果
         this.initTechEffects();
@@ -216,14 +283,7 @@ class DynamicRanking {
         
         // 如果正在预览或录制，重新绘制Canvas
         if (this.isRecording || this.isPreview) {
-            this.clearCanvas();
-            this.drawTitle();
-            // 重新绘制所有项目
-            this.animationItems.forEach(item => {
-                if (item.animate) {
-                    this.drawItem(item, performance.now());
-                }
-            });
+            this.draw();
         }
     }
 
@@ -276,13 +336,23 @@ class DynamicRanking {
                 return [];
             }
 
-            // 根据排序方式进行排序（目标是让“冠军”排在最后，以实现最后弹出的动画效果）
+            // 根据排序方式进行排序和分配排名
             if (this.sortOrder === 'asc') {
-                // 从小到大：数值越小排名越靠前，最小值是第1名，应该排在最后弹出
-                items.sort((a, b) => b.value - a.value);
+                // 从小到大：最小的先出现 (popupRank=1)，出现在最上方
+                // 最终状态：最大值在最上方 (displayRank=1)
+                items.sort((a, b) => a.value - b.value); // [最小, ..., 最大]
+                items.forEach((item, index) => {
+                    item.popupRank = index + 1; // 1: 最小, N: 最大
+                    item.displayRank = items.length - index; // 1: 最大, N: 最小
+                });
             } else {
-                // 从大到小：数值越大排名越靠前，最大值是第1名，应该排在最后弹出
-                items.sort((a, b) => a.value - b.value);
+                // 从大到小：最大的先出现 (popupRank=1)，出现在最上方
+                // 最终状态：最大值在最上方 (displayRank=1)
+                items.sort((a, b) => b.value - a.value); // [最大, ..., 最小]
+                items.forEach((item, index) => {
+                    item.popupRank = index + 1; // 1: 最大, N: 最小
+                    item.displayRank = index + 1; // 1: 最大, N: 最小
+                });
             }
 
             // 计算所有数据中的最大值和最小值，用于视觉效果计算
@@ -292,12 +362,36 @@ class DynamicRanking {
             const valueRange = maxValue - minValue || 1;
 
             // 为每个项目分配随机颜色和透明度
-            items.forEach((item) => {
-                // 生成完全随机的颜色（每次运行都不一样）
-                item.color = this.generateRandomColor();
-                // 根据值在范围中的比例设置透明度：0.5 到 1.0
+            let lastHue = -1;
+            items.forEach((item, index) => {
+                // 生成具有明显色差的颜色
+                let hue;
+                if (lastHue === -1) {
+                    hue = Math.floor(Math.random() * 360);
+                } else {
+                    // 确保相邻色相差至少 45 度，但不超过 315 度
+                    hue = (lastHue + 45 + Math.floor(Math.random() * 270)) % 360;
+                }
+                lastHue = hue;
+
+                // 根据色相选择不同的饱和度和亮度范围
+                let saturation, lightness;
+                if (hue >= 0 && hue < 60) {
+                    saturation = 85 + Math.floor(Math.random() * 10);
+                    lightness = 55 + Math.floor(Math.random() * 5);
+                } else if (hue >= 60 && hue < 240) {
+                    saturation = 75 + Math.floor(Math.random() * 15);
+                    lightness = 60 + Math.floor(Math.random() * 10);
+                } else {
+                    saturation = 80 + Math.floor(Math.random() * 15);
+                    lightness = 55 + Math.floor(Math.random() * 10);
+                }
+
+                item.color = { h: hue, s: saturation, l: lightness };
+                
+                // 根据值在范围中的比例设置透明度：0.6 到 1.0 (稍微提高一点基础透明度)
                 const valueRatio = (item.value - minValue) / valueRange;
-                item.opacity = 0.5 + valueRatio * 0.5;
+                item.opacity = 0.6 + valueRatio * 0.4;
             });
 
             // 动态更新烟花触发名次下拉框
@@ -348,14 +442,24 @@ class DynamicRanking {
         this.titleInput = document.getElementById('title-input');
         // 新增：标题颜色选择器
         this.titleColorInput = document.getElementById('title-color-input');
+        // 新增：标题高亮文字与颜色
+        this.titleHighlightTextInput = document.getElementById('title-highlight-text-input');
+        this.titleHighlightColorInput = document.getElementById('title-highlight-color-input');
         // 新增：标题大小选择器
         this.titleSizeInput = document.getElementById('title-size-input');
         this.titleSizeValue = document.getElementById('title-size-value');
+        // 新增：名称大小选择器
+        this.nameSizeInput = document.getElementById('name-size-input');
+        this.nameSizeValue = document.getElementById('name-size-value');
         this.durationInput = document.getElementById('animation-duration');
         this.animationTypeSelect = document.getElementById('animation-type');
         this.sortOrderRadios = document.getElementsByName('sort-order');
         this.redPacketRadios = document.getElementsByName('red-packet-enable'); // 新增：红包开关
         this.petalsRadios = document.getElementsByName('petals-enable'); // 新增：花瓣开关
+        this.heartRadios = document.getElementsByName('hearts-enable');
+        this.zodiacRadios = document.getElementsByName('zodiac-enable'); // 新增：星座图标开关
+        this.rankNumberRadios = document.getElementsByName('rank-number-enable');
+        this.rankNumberColorThemeSelect = document.getElementById('rank-number-color-theme');
         this.runButton = document.getElementById('run-animation');
         this.downloadButton = document.getElementById('download-video');
         this.rankingContent = document.getElementById('ranking-content');
@@ -398,7 +502,13 @@ class DynamicRanking {
         this.danmakuColorInput = document.getElementById('danmaku-color-input');
         this.danmakuSizeInput = document.getElementById('danmaku-size-input');
         this.danmakuSizeValue = document.getElementById('danmaku-size-value');
+        this.danmakuBoldInput = document.getElementById('danmaku-bold');
+        this.danmakuItalicInput = document.getElementById('danmaku-italic');
+        this.danmakuUnderlineInput = document.getElementById('danmaku-underline');
         this.danmakuContentInput = document.getElementById('danmaku-content');
+
+        // 新增：火箭控制元素
+        this.rocketEnableRadios = document.getElementsByName('rocket-enable');
     }
 
 
@@ -436,7 +546,15 @@ class DynamicRanking {
                 }
             });
         }
-
+        
+        // 标题输入实时监听
+        if (this.titleInput) {
+            this.titleInput.addEventListener('input', (e) => {
+                this.title = e.target.value.trim() || '排行榜';
+                this.updateDOMTitle();
+                if (this.isPreview || this.isRecording) this.draw();
+            });
+        }
         // 清除背景图
         if (this.clearBgImageBtn) {
             this.clearBgImageBtn.addEventListener('click', () => {
@@ -467,6 +585,11 @@ class DynamicRanking {
                         // ensure visible when opacity > 0
                         this.rankingBgImageEl.style.display = this.bgImageObj ? 'block' : 'none';
                     }
+                    
+                    // 实时预览更新
+                    if (this.isPreview || this.isRecording) {
+                        this.draw();
+                    }
                 }
             });
         }
@@ -476,14 +599,37 @@ class DynamicRanking {
             // initialize default
             this.titleColor = this.titleColorInput.value || '#ffffff';
             // apply initial color to DOM title if present
-            if (this.rankingTitle) this.rankingTitle.style.color = this.titleColor;
+            this.updateDOMTitle();
             this.titleColorInput.addEventListener('input', (e) => {
                 this.titleColor = e.target.value || '#ffffff';
                 // update DOM title color immediately
-                if (this.rankingTitle) this.rankingTitle.style.color = this.titleColor;
+                this.updateDOMTitle();
             });
         } else {
             this.titleColor = '#ffffff';
+        }
+
+        // 标题高亮文字与颜色
+        if (this.titleHighlightTextInput) {
+            this.titleHighlightText = this.titleHighlightTextInput.value || '';
+            this.titleHighlightTextInput.addEventListener('input', (e) => {
+                this.titleHighlightText = e.target.value || '';
+                this.updateDOMTitle();
+                if (this.isPreview || this.isRecording) this.draw();
+            });
+        } else {
+            this.titleHighlightText = '';
+        }
+        
+        if (this.titleHighlightColorInput) {
+            this.titleHighlightColor = this.titleHighlightColorInput.value || '#ffd700';
+            this.titleHighlightColorInput.addEventListener('input', (e) => {
+                this.titleHighlightColor = e.target.value || '#ffd700';
+                this.updateDOMTitle();
+                if (this.isPreview || this.isRecording) this.draw();
+            });
+        } else {
+            this.titleHighlightColor = '#ffd700';
         }
 
         // 标题大小设置
@@ -495,12 +641,27 @@ class DynamicRanking {
                 this.titleSize = parseInt(e.target.value) || 24;
                 this.titleSizeValue.textContent = this.titleSize + 'px';
                 // 更新DOM标题大小
-                if (this.rankingTitle) {
-                    this.rankingTitle.style.fontSize = this.titleSize + 'px';
-                }
+                this.updateDOMTitle();
             });
         } else {
             this.titleSize = 24;
+        }
+
+        // 名称大小设置
+        if (this.nameSizeInput && this.nameSizeValue) {
+            this.nameSize = parseInt(this.nameSizeInput.value) || 20;
+            this.nameSizeValue.textContent = this.nameSize + 'px';
+            
+            this.nameSizeInput.addEventListener('input', (e) => {
+                this.nameSize = parseInt(e.target.value) || 20;
+                this.nameSizeValue.textContent = this.nameSize + 'px';
+                // 实时预览更新
+                if (this.isPreview || this.isRecording) {
+                    this.draw();
+                }
+            });
+        } else {
+            this.nameSize = 20;
         }
 
         // 数值显示设置 (单选框)
@@ -577,6 +738,11 @@ class DynamicRanking {
                 if (this.bgThemeSelectContainer) {
                     this.bgThemeSelectContainer.style.display = (value === 'yes') ? 'flex' : 'none';
                 }
+                
+                // 实时预览更新
+                if (this.isPreview || this.isRecording) {
+                    this.draw();
+                }
             };
             
             let initialBgEnable = 'yes';
@@ -602,6 +768,10 @@ class DynamicRanking {
                     alert('运行动画出错: ' + err.message);
                 }
             });
+            try {
+                this._runBtnBound = true;
+                this.runButton.dataset.drBound = '1';
+            } catch (e) { /* ignore */ }
         }
 
         // 预览按钮（不录制）
@@ -616,6 +786,10 @@ class DynamicRanking {
                     alert('预览动画出错: ' + err.message);
                 }
             });
+            try {
+                this._previewBtnBound = true;
+                previewBtn.dataset.drBound = '1';
+            } catch (e) { /* ignore */ }
         }
 
         // 下载视频按钮
@@ -655,6 +829,40 @@ class DynamicRanking {
                 radio.addEventListener('change', (e) => {
                     if (e.target.checked) this.petalsEnabled = (e.target.value === 'on');
                 });
+            });
+        }
+        if (this.heartRadios && this.heartRadios.length > 0) {
+            this.heartRadios.forEach(radio => {
+                if (radio.checked) this.heartsEnabled = (radio.value === 'on');
+                radio.addEventListener('change', (e) => {
+                    if (e.target.checked) this.heartsEnabled = (e.target.value === 'on');
+                });
+            });
+        }
+
+        // 星座图标开关设置
+        if (this.zodiacRadios && this.zodiacRadios.length > 0) {
+            this.zodiacRadios.forEach(radio => {
+                if (radio.checked) this.zodiacEnabled = (radio.value === 'on');
+                radio.addEventListener('change', (e) => {
+                    if (e.target.checked) this.zodiacEnabled = (e.target.value === 'on');
+                });
+            });
+        }
+
+        if (this.rankNumberRadios && this.rankNumberRadios.length > 0) {
+            this.rankNumberRadios.forEach(radio => {
+                if (radio.checked) this.rankNumberEnabled = (radio.value === 'on');
+                radio.addEventListener('change', (e) => {
+                    if (e.target.checked) this.rankNumberEnabled = (e.target.value === 'on');
+                });
+            });
+        }
+        if (this.rankNumberColorThemeSelect) {
+            this.rankNumberColorTheme = this.rankNumberColorThemeSelect.value || 'cyber-blue';
+            this.rankNumberColorThemeSelect.addEventListener('change', (e) => {
+                this.rankNumberColorTheme = e.target.value || 'cyber-blue';
+                if (this.isPreview || this.isRecording) this.draw();
             });
         }
 
@@ -716,6 +924,11 @@ class DynamicRanking {
             this.backgroundThemeSelect.addEventListener('change', (e) => {
                 const theme = e.target.value;
                 this.changeBackgroundColor(theme);
+                
+                // 实时预览更新
+                if (this.isPreview || this.isRecording) {
+                    this.draw();
+                }
             });
         }
         
@@ -746,10 +959,42 @@ class DynamicRanking {
             });
         }
         
+        // 弹幕字体样式设置
+        if (this.danmakuBoldInput) {
+            this.danmakuBold = this.danmakuBoldInput.checked;
+            this.danmakuBoldInput.addEventListener('change', (e) => {
+                this.danmakuBold = e.target.checked;
+            });
+        }
+        
+        if (this.danmakuItalicInput) {
+            this.danmakuItalic = this.danmakuItalicInput.checked;
+            this.danmakuItalicInput.addEventListener('change', (e) => {
+                this.danmakuItalic = e.target.checked;
+            });
+        }
+        
+        if (this.danmakuUnderlineInput) {
+            this.danmakuUnderline = this.danmakuUnderlineInput.checked;
+            this.danmakuUnderlineInput.addEventListener('change', (e) => {
+                this.danmakuUnderline = e.target.checked;
+            });
+        }
+        
         if (this.danmakuContentInput) {
             this.danmakuContent = this.danmakuContentInput.value || '太棒了,恭喜,加油,优秀,厉害';
             this.danmakuContentInput.addEventListener('input', (e) => {
                 this.danmakuContent = e.target.value || '太棒了,恭喜,加油,优秀,厉害';
+            });
+        }
+
+        // 火箭特效开关设置
+        if (this.rocketEnableRadios && this.rocketEnableRadios.length > 0) {
+            this.rocketEnableRadios.forEach(radio => {
+                if (radio.checked) this.rocketEnabled = (radio.value === 'on');
+                radio.addEventListener('change', (e) => {
+                    if (e.target.checked) this.rocketEnabled = (e.target.value === 'on');
+                });
             });
         }
     }
@@ -757,6 +1002,12 @@ class DynamicRanking {
     // 播放预览（不录制）
     async runPreview() {
         try {
+            // 停止当前可能正在运行的动画
+            if (this.animationFrameId) {
+                cancelAnimationFrame(this.animationFrameId);
+                this.animationFrameId = null;
+            }
+
             this.data = this.parseData();
             if (this.data.length === 0) return;
 
@@ -765,18 +1016,29 @@ class DynamicRanking {
             this.updateIntervalDuration();
             this.animationType = this.animationTypeSelect.value;
 
-            // 清理并重置烟花状态，避免上次运行残留影响本次
+            // 彻底重置烟花和背景状态
             this.fireworksActive = false;
             this.fireworksStartTime = 0;
             this.lastFireworkSpawn = 0;
             this.fireworkParticles = [];
             this.fireworkRockets = [];
             this.fireworkRings = [];
+            this.radarAngle = 0; // 重置雷达角度
+            this.energyParticles = []; // 清空能量粒子
+            this.digitalRainChars = []; // 重置数字雨
+            this.starParticles = []; // 重置星光粒子
 
             // 应用烟花设置
             if (this.fireworksEnableRadios.length > 0) {
                 const checkedRadio = Array.from(this.fireworksEnableRadios).find(r => r.checked);
                 this.fireworksEnabled = checkedRadio ? checkedRadio.value === 'on' : true;
+            }
+            if (this.rankNumberRadios && this.rankNumberRadios.length > 0) {
+                const checkedRankRadio = Array.from(this.rankNumberRadios).find(r => r.checked);
+                this.rankNumberEnabled = checkedRankRadio ? checkedRankRadio.value === 'on' : true;
+            }
+            if (this.rankNumberColorThemeSelect) {
+                this.rankNumberColorTheme = this.rankNumberColorThemeSelect.value || 'cyber-blue';
             }
             if (this.fireworksTriggerRankSelect) {
                 this.fireworksTriggerRank = parseInt(this.fireworksTriggerRankSelect.value) || 3;
@@ -787,6 +1049,12 @@ class DynamicRanking {
             }
             if (this.fireworksShapeSelect) this.fireworksShape = this.fireworksShapeSelect.value;
 
+            // 读取并应用火箭设置（从 UI）
+            if (this.rocketEnableRadios && this.rocketEnableRadios.length > 0) {
+                const checkedRadio = Array.from(this.rocketEnableRadios).find(r => r.checked);
+                this.rocketEnabled = checkedRadio ? checkedRadio.value === 'on' : false;
+            }
+
             this.recordedBlob = null;
             this.downloadButton.disabled = true;
 
@@ -795,11 +1063,7 @@ class DynamicRanking {
 
             // 标题
             this.title = this.titleInput.value.trim() || '排行榜';
-            this.rankingTitle.textContent = this.title;
-            if (this.rankingTitle) {
-                this.rankingTitle.style.color = this.titleColor;
-                this.rankingTitle.style.fontSize = this.titleSize + 'px';
-            }
+            this.updateDOMTitle();
 
             // 先切换为 playing 状态以确保 canvas 可见，从而正确测量尺寸
             this.rankingContainer.classList.add('playing');
@@ -996,6 +1260,12 @@ class DynamicRanking {
      */
     async runAnimation() {
         try {
+            // 停止当前可能正在运行的动画
+            if (this.animationFrameId) {
+                cancelAnimationFrame(this.animationFrameId);
+                this.animationFrameId = null;
+            }
+
             // 解析数据
             this.data = this.parseData();
             if (this.data.length === 0) {
@@ -1019,18 +1289,29 @@ class DynamicRanking {
             this.animationType = this.animationTypeSelect.value;
             this.log(`使用动画类型: ${this.animationType}`);
 
-            // 在每次正式运行前重置烟花状态，防止上一次运行残留导致立即触发
+            // 在每次正式运行前彻底重置烟花和背景状态
             this.fireworksActive = false;
             this.fireworksStartTime = 0;
             this.lastFireworkSpawn = 0;
             this.fireworkParticles = [];
             this.fireworkRockets = [];
             this.fireworkRings = [];
+            this.radarAngle = 0; // 重置雷达角度
+            this.energyParticles = []; // 清空能量粒子
+            this.digitalRainChars = []; // 重置数字雨
+            this.starParticles = []; // 重置星光粒子
 
             // 读取并应用烟花设置（从 UI）
             if (this.fireworksEnableRadios.length > 0) {
                 const checkedRadio = Array.from(this.fireworksEnableRadios).find(r => r.checked);
                 this.fireworksEnabled = checkedRadio ? checkedRadio.value === 'on' : true;
+            }
+            if (this.rankNumberRadios && this.rankNumberRadios.length > 0) {
+                const checkedRankRadio = Array.from(this.rankNumberRadios).find(r => r.checked);
+                this.rankNumberEnabled = checkedRankRadio ? checkedRankRadio.value === 'on' : true;
+            }
+            if (this.rankNumberColorThemeSelect) {
+                this.rankNumberColorTheme = this.rankNumberColorThemeSelect.value || 'cyber-blue';
             }
             if (this.fireworksTriggerRankSelect) {
                 this.fireworksTriggerRank = parseInt(this.fireworksTriggerRankSelect.value) || 3;
@@ -1043,7 +1324,13 @@ class DynamicRanking {
                 this.fireworksShape = this.fireworksShapeSelect.value;
             }
 
-            this.log(`fireworks enabled=${this.fireworksEnabled}`);
+            // 读取并应用火箭设置（从 UI）
+            if (this.rocketEnableRadios && this.rocketEnableRadios.length > 0) {
+                const checkedRadio = Array.from(this.rocketEnableRadios).find(r => r.checked);
+                this.rocketEnabled = checkedRadio ? checkedRadio.value === 'on' : false;
+            }
+
+            this.log(`fireworks enabled=${this.fireworksEnabled}, rocket enabled=${this.rocketEnabled}`);
 
             // 禁用下载按钮
             this.downloadButton.disabled = true;
@@ -1055,11 +1342,7 @@ class DynamicRanking {
 
             // 设置标题
             this.title = this.titleInput.value.trim() || '排行榜';
-            this.rankingTitle.textContent = this.title;
-            if (this.rankingTitle) {
-                this.rankingTitle.style.color = this.titleColor;
-                this.rankingTitle.style.fontSize = this.titleSize + 'px';
-            }
+            this.updateDOMTitle();
 
             // 先将容器置为 playing 状态以确保 canvas 可见并可正确测量尺寸
             this.rankingContainer.classList.add('playing');
@@ -1208,8 +1491,8 @@ class DynamicRanking {
         // 数组末尾的项目是“冠军”，将最后弹出
         for (let i = 0; i < maxCount; i++) {
             const item = this.data[i];
-            const actualRank = i + 1; // 第12名是1，第1名是12（弹出顺序）
-            const displayRank = maxCount - i; // 实际排名：数组末尾的项目始终是第1名
+            const actualRank = item.popupRank; // 弹出顺序
+            const displayRank = item.displayRank; // 实际排名
             const percentage = (item.value / maxValue) * 100;
 
             // 根据动画类型设置初始状态
@@ -1226,7 +1509,7 @@ class DynamicRanking {
                 // 动画状态
                 ...initialState, // 初始状态（y, x, scale, rotation, opacity等）
                 animate: false, // 是否开始动画
-                delay: i * (this.flyInDuration + this.intervalDuration * 1000),
+                delay: (actualRank - 1) * (this.flyInDuration + this.intervalDuration * 1000),
                 startTime: 0
             });
         }
@@ -1349,129 +1632,436 @@ class DynamicRanking {
       * 绘制科技感背景效果
       */
      drawTechBackground(currentTime) {
-         if (!this.ctx || !this.techEnabled || !this.bgThemeEnabled) return;
+         if (!this.ctx || !this.techEnabled) return;
 
          const currentTheme = this.backgroundColor;
+         const themeConfig = this.backgroundThemes[currentTheme] || this.backgroundThemes.blue;
          
-         // 如果是新增的静态背景，绘制静态图案
-         if (['matrix', 'circuit', 'blueprint', 'nebula'].includes(currentTheme)) {
-             this.drawStaticTechBackground(currentTheme);
-             return;
+         // 1. 绘制上传的背景图（如果有）
+         if (this.bgImageObj) {
+             this.ctx.save();
+             const canvasAspect = this.canvasWidth / this.canvasHeight;
+             const imgAspect = this.bgImageObj.width / this.bgImageObj.height;
+             let drawWidth, drawHeight, offsetX, offsetY;
+             
+             if (imgAspect > canvasAspect) {
+                 drawHeight = this.canvasHeight;
+                 drawWidth = this.canvasHeight * imgAspect;
+                 offsetX = (this.canvasWidth - drawWidth) / 2;
+                 offsetY = 0;
+             } else {
+                 drawWidth = this.canvasWidth;
+                 drawHeight = this.canvasWidth / imgAspect;
+                 offsetX = 0;
+                 offsetY = (this.canvasHeight - drawHeight) / 2;
+             }
+             
+             this.ctx.globalAlpha = this.bgOpacity;
+             this.ctx.drawImage(this.bgImageObj, offsetX, offsetY, drawWidth, drawHeight);
+             this.ctx.restore();
+         } else if (!this.bgThemeEnabled) {
+             // 既没有背景图也没有启用背景主题，使用纯黑兜底
+             this.ctx.save();
+             this.ctx.fillStyle = '#000000';
+             this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+             this.ctx.restore();
          }
 
-         // 否则绘制原有的动态科技感效果
-         this.drawDigitalRain(currentTime);
-         this.drawGridLines(currentTime);
-         this.drawStarParticles(currentTime);
+         // 2. 绘制基础渐变背景（仅在启用背景主题时）
+         if (this.bgThemeEnabled) {
+             this.ctx.save();
+             const grad = this.ctx.createLinearGradient(0, 0, 0, this.canvasHeight);
+             
+             // 如果有背景图，渐变背景作为滤镜层，增加对比度
+             if (this.bgImageObj) {
+                 // 叠加时的透明度：背景图越透明，主题层越明显
+                 this.ctx.globalAlpha = Math.max(0.3, 0.8 - this.bgOpacity * 0.5);
+             }
+             
+             grad.addColorStop(0, themeConfig.gradient[0]);
+             grad.addColorStop(1, themeConfig.gradient[1]);
+             this.ctx.fillStyle = grad;
+             this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+             this.ctx.restore();
+
+             // 3. 根据效果类型绘制特效
+             if (themeConfig.type !== 'none') {
+                 this.ctx.save();
+                 // 特效层透明度也稍微降低，避免完全遮挡背景图
+                 if (this.bgImageObj) this.ctx.globalAlpha = 0.7;
+
+                 switch (themeConfig.effect) {
+                     case 'matrix':
+                         this.drawMatrixGrid();
+                         break;
+                     case 'circuit':
+                         this.drawCircuitLines();
+                         break;
+                     case 'blueprint':
+                         this.drawBlueprintGrid();
+                         break;
+                     case 'nebula':
+                         this.drawNebulaEffect();
+                         break;
+                     case 'hexagon':
+                         this.drawHexagonGrid();
+                         break;
+                     case 'radar':
+                         this.drawRadarScan(currentTime);
+                         break;
+                     case 'cyber-grid':
+                         this.drawCyberGrid();
+                         break;
+                     case 'neon-lines':
+                         this.drawNeonLines();
+                         break;
+                     case 'perspective':
+                         this.drawPerspectiveGrid();
+                         break;
+                     case 'digital-rain':
+                         this.drawDigitalRain(currentTime);
+                         break;
+                     case 'grid':
+                         this.drawGridLines(currentTime);
+                         break;
+                     case 'particles':
+                         this.drawStarParticles(currentTime);
+                         this.drawEnergyParticles(currentTime);
+                         break;
+                     case 'stars':
+                         this.drawStarParticles(currentTime);
+                         break;
+                     case 'energy':
+                         this.drawEnergyParticles(currentTime);
+                         this.drawGridLines(currentTime);
+                         break;
+                     case 'pulse':
+                         this.drawPulseEffect(currentTime);
+                         break;
+                     case 'scanlines':
+                         this.drawScanLines(currentTime);
+                         break;
+                     case 'hologram':
+                         this.drawHologramEffect(currentTime);
+                         break;
+                     default:
+                         this.drawGridLines(currentTime);
+                 }
+                 this.ctx.restore();
+             }
+
+             // 4. 增加全屏科技感氛围层（针对动态类型）
+             if (themeConfig.type === 'dynamic') {
+                 this.drawScanBeam(currentTime);
+                 this.drawAtmosphere();
+             }
+         }
      }
 
      /**
-      * 绘制静态科技感背景图案
+      * 绘制矩阵网格
       */
-     drawStaticTechBackground(theme) {
+     drawMatrixGrid() {
          this.ctx.save();
+         this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.1)';
+         this.ctx.lineWidth = 1;
+         const matrixSize = 20;
+         for (let x = 0; x < this.canvasWidth; x += matrixSize) {
+             for (let y = 0; y < this.canvasHeight; y += matrixSize) {
+                 this.ctx.strokeRect(x, y, matrixSize, matrixSize);
+             }
+         }
+         this.ctx.restore();
+     }
+
+     /**
+      * 绘制电路线条
+      */
+     drawCircuitLines() {
+         this.ctx.save();
+         this.ctx.strokeStyle = 'rgba(0, 200, 255, 0.15)';
+         this.ctx.lineWidth = 1.5;
          
-         switch (theme) {
-             case 'matrix':
-                 // 绘制密集网格矩阵
-                 this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.1)';
-                 this.ctx.lineWidth = 1;
-                 const matrixSize = 20;
-                 for (let x = 0; x < this.canvasWidth; x += matrixSize) {
-                     for (let y = 0; y < this.canvasHeight; y += matrixSize) {
-                         if (Math.random() > 0.9) {
-                             this.ctx.fillStyle = 'rgba(0, 255, 0, 0.05)';
-                             this.ctx.fillRect(x, y, matrixSize, matrixSize);
-                         }
-                         this.ctx.strokeRect(x, y, matrixSize, matrixSize);
-                     }
-                 }
-                 break;
-                 
-             case 'circuit':
-                 // 绘制电子电路线条
-                 this.ctx.strokeStyle = 'rgba(0, 200, 255, 0.15)';
-                 this.ctx.lineWidth = 1.5;
-                 const seed = 12345; // 固定随机种子以保持静态
-                 let tempRandom = (s) => {
-                     s = Math.sin(s) * 10000;
-                     return s - Math.floor(s);
-                 };
-                 
-                 for (let i = 0; i < 40; i++) {
-                     let x = tempRandom(i * 1.1) * this.canvasWidth;
-                     let y = tempRandom(i * 1.2) * this.canvasHeight;
-                     let len = 50 + tempRandom(i * 1.3) * 150;
-                     let angle = Math.floor(tempRandom(i * 1.4) * 4) * 90; // 0, 90, 180, 270
-                     
-                     this.ctx.beginPath();
-                     this.ctx.moveTo(x, y);
-                     let dx = Math.cos(angle * Math.PI / 180) * len;
-                     let dy = Math.sin(angle * Math.PI / 180) * len;
-                     this.ctx.lineTo(x + dx, y + dy);
-                     this.ctx.stroke();
-                     
-                     // 绘制接点圆圈
-                     this.ctx.beginPath();
-                     this.ctx.arc(x, y, 3, 0, Math.PI * 2);
-                     this.ctx.stroke();
-                 }
-                 break;
-                 
-             case 'blueprint':
-                 // 绘制蓝图设计感网格
-                 this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-                 this.ctx.lineWidth = 0.5;
-                 // 大方格
-                 for (let x = 0; x < this.canvasWidth; x += 100) {
-                     this.ctx.beginPath();
-                     this.ctx.moveTo(x, 0);
-                     this.ctx.lineTo(x, this.canvasHeight);
-                     this.ctx.stroke();
-                 }
-                 for (let y = 0; y < this.canvasHeight; y += 100) {
-                     this.ctx.beginPath();
-                     this.ctx.moveTo(0, y);
-                     this.ctx.lineTo(this.canvasWidth, y);
-                     this.ctx.stroke();
-                 }
-                 // 小方格
-                 this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-                 for (let x = 0; x < this.canvasWidth; x += 20) {
-                     this.ctx.beginPath();
-                     this.ctx.moveTo(x, 0);
-                     this.ctx.lineTo(x, this.canvasHeight);
-                     this.ctx.stroke();
-                 }
-                 for (let y = 0; y < this.canvasHeight; y += 20) {
-                     this.ctx.beginPath();
-                     this.ctx.moveTo(0, y);
-                     this.ctx.lineTo(this.canvasWidth, y);
-                     this.ctx.stroke();
-                 }
-                 break;
-                 
-             case 'nebula':
-                 // 绘制深邃星云感
-                 for (let i = 0; i < 5; i++) {
-                     const x = (i / 5) * this.canvasWidth + (Math.sin(i) * 100);
-                     const y = (i % 2) * (this.canvasHeight / 2) + 200;
-                     const radius = 300 + i * 50;
-                     const grad = this.ctx.createRadialGradient(x, y, 0, x, y, radius);
-                     const colors = [
-                         'rgba(100, 0, 255, 0.05)',
-                         'rgba(0, 100, 255, 0.03)',
-                         'rgba(255, 0, 100, 0.02)',
-                         'rgba(0, 0, 0, 0)'
-                     ];
-                     grad.addColorStop(0, colors[i % colors.length]);
-                     grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-                     this.ctx.fillStyle = grad;
-                     this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
-                 }
-                 break;
+         const tempRandom = (s) => {
+             const x = Math.sin(s) * 10000;
+             return x - Math.floor(x);
+         };
+         
+         for (let i = 0; i < 40; i++) {
+             let x = tempRandom(i * 1.1) * this.canvasWidth;
+             let y = tempRandom(i * 1.2) * this.canvasHeight;
+             let len = 50 + tempRandom(i * 1.3) * 150;
+             let angle = Math.floor(tempRandom(i * 1.4) * 4) * 90;
+             
+             this.ctx.beginPath();
+             this.ctx.moveTo(x, y);
+             let dx = Math.cos(angle * Math.PI / 180) * len;
+             let dy = Math.sin(angle * Math.PI / 180) * len;
+             this.ctx.lineTo(x + dx, y + dy);
+             this.ctx.stroke();
+             this.ctx.beginPath();
+             this.ctx.arc(x, y, 3, 0, Math.PI * 2);
+             this.ctx.stroke();
+         }
+         this.ctx.restore();
+     }
+
+     /**
+      * 绘制蓝图网格
+      */
+     drawBlueprintGrid() {
+         this.ctx.save();
+         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+         this.ctx.lineWidth = 0.5;
+         for (let x = 0; x < this.canvasWidth; x += 100) {
+             this.ctx.beginPath();
+             this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.canvasHeight);
+             this.ctx.stroke();
+         }
+         for (let y = 0; y < this.canvasHeight; y += 100) {
+             this.ctx.beginPath();
+             this.ctx.moveTo(0, y); this.ctx.lineTo(this.canvasWidth, y);
+             this.ctx.stroke();
+         }
+         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+         for (let x = 0; x < this.canvasWidth; x += 20) {
+             this.ctx.beginPath();
+             this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.canvasHeight);
+             this.ctx.stroke();
+         }
+         for (let y = 0; y < this.canvasHeight; y += 20) {
+             this.ctx.beginPath();
+             this.ctx.moveTo(0, y); this.ctx.lineTo(this.canvasWidth, y);
+             this.ctx.stroke();
+         }
+         this.ctx.restore();
+     }
+
+     /**
+      * 绘制星云效果
+      */
+     drawNebulaEffect() {
+         this.ctx.save();
+         for (let i = 0; i < 5; i++) {
+             const x = (i / 5) * this.canvasWidth + (Math.sin(i * 1.5) * 50);
+             const y = (i % 2 === 0 ? 0.3 : 0.7) * this.canvasHeight;
+             const radius = 300 + i * 50;
+             const grad = this.ctx.createRadialGradient(x, y, 0, x, y, radius);
+             grad.addColorStop(0, i % 2 === 0 ? 'rgba(100, 0, 255, 0.05)' : 'rgba(0, 100, 255, 0.05)');
+             grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+             this.ctx.fillStyle = grad;
+             this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+         }
+         this.ctx.restore();
+     }
+
+     /**
+      * 绘制六边形蜂巢网格
+      */
+     drawHexagonGrid() {
+         this.ctx.save();
+         this.ctx.strokeStyle = 'rgba(0, 255, 255, 0.05)';
+         this.ctx.lineWidth = 1;
+         const size = 30;
+         const h = size * Math.sqrt(3);
+         for (let y = 0; y < this.canvasHeight + h; y += h) {
+             for (let x = 0; x < this.canvasWidth + size * 3; x += size * 3) {
+                 this.drawHex(x, y, size);
+                 this.drawHex(x + size * 1.5, y + h / 2, size);
+             }
+         }
+         this.ctx.restore();
+     }
+
+     drawHex(x, y, size) {
+         this.ctx.beginPath();
+         for (let i = 0; i < 6; i++) {
+             const angle = i * Math.PI / 3;
+             this.ctx.lineTo(x + size * Math.cos(angle), y + size * Math.sin(angle));
+         }
+         this.ctx.closePath();
+         this.ctx.stroke();
+     }
+
+     /**
+      * 绘制雷达扫描
+      */
+     drawRadarScan(currentTime) {
+         this.ctx.save();
+         const centerX = this.canvasWidth / 2;
+         const centerY = this.canvasHeight / 2;
+         const radius = Math.max(this.canvasWidth, this.canvasHeight) * 0.8;
+         
+         this.radarAngle += this.radarSpeed;
+         
+         // 1. 绘制扫描扇形
+         const grad = this.ctx.createConicGradient(this.radarAngle, centerX, centerY);
+         grad.addColorStop(0, 'rgba(0, 255, 150, 0.25)');
+         grad.addColorStop(0.1, 'rgba(0, 255, 150, 0.05)');
+         grad.addColorStop(0.2, 'rgba(0, 255, 150, 0)');
+         grad.addColorStop(1, 'rgba(0, 255, 150, 0)');
+         
+         this.ctx.fillStyle = grad;
+         this.ctx.beginPath();
+         this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+         this.ctx.fill();
+         
+         // 2. 绘制静态圆环和刻度
+         this.ctx.strokeStyle = 'rgba(0, 255, 150, 0.1)';
+         this.ctx.lineWidth = 1;
+         for (let r = 100; r < radius; r += 150) {
+             this.ctx.beginPath();
+             this.ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
+             this.ctx.stroke();
+             
+             // 增加小刻度
+             this.ctx.save();
+             this.ctx.translate(centerX, centerY);
+             for(let a=0; a<360; a+=30) {
+                 this.ctx.rotate(30 * Math.PI / 180);
+                 this.ctx.beginPath();
+                 this.ctx.moveTo(r, 0);
+                 this.ctx.lineTo(r + 10, 0);
+                 this.ctx.stroke();
+             }
+             this.ctx.restore();
          }
          
+         // 3. 绘制扫描波动圆环
+         const ripple = (currentTime % 2000) / 2000;
+         this.ctx.beginPath();
+         this.ctx.arc(centerX, centerY, ripple * radius, 0, Math.PI * 2);
+         this.ctx.strokeStyle = `rgba(0, 255, 150, ${0.2 * (1 - ripple)})`;
+         this.ctx.lineWidth = 2;
+         this.ctx.stroke();
+
+         this.ctx.restore();
+     }
+
+     /**
+      * 绘制氛围光晕和暗角
+      */
+     drawAtmosphere() {
+         this.ctx.save();
+         const grad = this.ctx.createRadialGradient(
+             this.canvasWidth / 2, this.canvasHeight / 2, 0,
+             this.canvasWidth / 2, this.canvasHeight / 2, this.canvasHeight * 0.8
+         );
+         grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+         grad.addColorStop(1, 'rgba(0, 0, 0, 0.35)');
+         this.ctx.fillStyle = grad;
+         this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+         this.ctx.restore();
+     }
+
+     /**
+      * 绘制赛博网格
+      */
+     drawCyberGrid() {
+         this.ctx.save();
+         this.ctx.strokeStyle = 'rgba(255, 0, 255, 0.1)';
+         this.ctx.lineWidth = 1;
+         const gridSize = 40;
+         for (let x = 0; x < this.canvasWidth; x += gridSize) {
+             this.ctx.beginPath();
+             this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.canvasHeight);
+             this.ctx.stroke();
+         }
+         for (let y = 0; y < this.canvasHeight; y += gridSize) {
+             this.ctx.beginPath();
+             this.ctx.moveTo(0, y); this.ctx.lineTo(this.canvasWidth, y);
+             this.ctx.stroke();
+         }
+         this.ctx.restore();
+     }
+
+     /**
+      * 绘制霓虹线条
+      */
+     drawNeonLines() {
+         this.ctx.save();
+         this.ctx.lineWidth = 2;
+         for (let i = 0; i < 15; i++) {
+             const x = (i * 50) % this.canvasWidth;
+             this.ctx.strokeStyle = `hsla(${i * 20}, 100%, 50%, 0.1)`;
+             this.ctx.beginPath();
+             this.ctx.moveTo(x, 0);
+             this.ctx.lineTo(x + 100, this.canvasHeight);
+             this.ctx.stroke();
+         }
+         this.ctx.restore();
+     }
+
+     /**
+      * 绘制透视网格
+      */
+     drawPerspectiveGrid() {
+         this.ctx.save();
+         this.ctx.strokeStyle = 'rgba(0, 150, 255, 0.15)';
+         const centerX = this.canvasWidth / 2;
+         const horizonY = this.canvasHeight * 0.4;
+         for (let i = -10; i <= 10; i++) {
+             this.ctx.beginPath();
+             this.ctx.moveTo(centerX, horizonY);
+             this.ctx.lineTo(centerX + i * 200, this.canvasHeight);
+             this.ctx.stroke();
+         }
+         for (let i = 0; i < 15; i++) {
+             const y = horizonY + Math.pow(i / 15, 2) * (this.canvasHeight - horizonY);
+             this.ctx.beginPath();
+             this.ctx.moveTo(0, y); this.ctx.lineTo(this.canvasWidth, y);
+             this.ctx.stroke();
+         }
+         this.ctx.restore();
+     }
+
+     /**
+      * 绘制能量粒子
+      */
+     drawEnergyParticles(currentTime) {
+         this.ctx.save();
+         
+         // 动态生成粒子
+         if (this.energyParticles.length < 40) {
+             this.energyParticles.push({
+                 x: Math.random() * this.canvasWidth,
+                 y: this.canvasHeight + 20,
+                 speed: 1 + Math.random() * 3,
+                 size: 1 + Math.random() * 4,
+                 pulse: Math.random() * Math.PI * 2,
+                 type: Math.random() > 0.7 ? 'bit' : 'spark',
+                 char: Math.random() > 0.5 ? '0' : '1',
+                 color: this.backgroundColor === 'red' ? '255, 100, 100' : '100, 200, 255'
+             });
+         }
+         
+         for (let i = this.energyParticles.length - 1; i >= 0; i--) {
+             const p = this.energyParticles[i];
+             p.y -= p.speed;
+             p.x += Math.sin(p.y / 60) * 0.8;
+             p.pulse += 0.1;
+             
+             const life = p.y / this.canvasHeight;
+             const alpha = life * (0.3 + 0.3 * Math.sin(p.pulse));
+             
+             if (p.type === 'bit') {
+                 // 绘制数据比特
+                 this.ctx.font = `bold ${p.size + 10}px monospace`;
+                 this.ctx.fillStyle = `rgba(${p.color}, ${alpha})`;
+                 this.ctx.fillText(p.char, p.x, p.y);
+             } else {
+                 // 绘制发光能量火花
+                 const grad = this.ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2);
+                 grad.addColorStop(0, `rgba(${p.color}, ${alpha})`);
+                 grad.addColorStop(1, `rgba(${p.color}, 0)`);
+                 this.ctx.fillStyle = grad;
+                 this.ctx.beginPath();
+                 this.ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
+                 this.ctx.fill();
+             }
+             
+             if (p.y < -20) this.energyParticles.splice(i, 1);
+         }
          this.ctx.restore();
      }
 
@@ -1480,25 +2070,67 @@ class DynamicRanking {
       */
      drawDigitalRain(currentTime) {
          this.ctx.save();
-         this.ctx.font = '16px monospace';
+         this.ctx.font = 'bold 16px monospace';
          this.ctx.textAlign = 'center';
          
          this.digitalRainChars.forEach(column => {
-             column.chars.forEach(char => {
+             column.chars.forEach((char, index) => {
                  // 更新位置
                  char.y += column.speed;
-                 if (char.y > this.canvasHeight) {
-                     char.y = -20;
+                 if (char.y > this.canvasHeight + 50) {
+                     char.y = -Math.random() * 100;
                      char.char = Math.floor(Math.random() * 10).toString();
                  }
                  
-                 // 绘制字符
-                 const opacity = char.brightness * 0.6;
-                 this.ctx.fillStyle = `rgba(0, 255, 255, ${opacity})`;
+                 // 越靠近尾部越暗，越靠近头部越亮
+                 const isHead = index === column.chars.length - 1;
+                 const opacity = isHead ? 0.9 : char.brightness * 0.5;
+                 
+                 if (isHead) {
+                     // 头部发光效果
+                     this.ctx.shadowBlur = 10;
+                     this.ctx.shadowColor = '#fff';
+                     this.ctx.fillStyle = `rgba(200, 255, 220, ${opacity})`;
+                 } else {
+                     this.ctx.shadowBlur = 0;
+                     this.ctx.fillStyle = `rgba(0, 255, 100, ${opacity})`;
+                 }
+                 
                  this.ctx.fillText(char.char, column.x, char.y);
+                 
+                 // 随机闪烁字符
+                 if (Math.random() > 0.98) {
+                     char.char = Math.floor(Math.random() * 10).toString();
+                 }
              });
          });
          
+         this.ctx.restore();
+     }
+
+     /**
+      * 绘制全屏扫描光束
+      */
+     drawScanBeam(currentTime) {
+         this.ctx.save();
+         const scanPos = (currentTime % 4000) / 4000;
+         const y = scanPos * this.canvasHeight;
+         
+         const grad = this.ctx.createLinearGradient(0, y - 50, 0, y + 50);
+         grad.addColorStop(0, 'rgba(0, 255, 255, 0)');
+         grad.addColorStop(0.5, 'rgba(0, 255, 255, 0.08)');
+         grad.addColorStop(1, 'rgba(0, 255, 255, 0)');
+         
+         this.ctx.fillStyle = grad;
+         this.ctx.fillRect(0, y - 50, this.canvasWidth, 100);
+         
+         // 极细的高亮扫描线
+         this.ctx.beginPath();
+         this.ctx.moveTo(0, y);
+         this.ctx.lineTo(this.canvasWidth, y);
+         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+         this.ctx.lineWidth = 0.5;
+         this.ctx.stroke();
          this.ctx.restore();
      }
 
@@ -1523,6 +2155,97 @@ class DynamicRanking {
                  this.ctx.stroke();
              }
          });
+         
+         this.ctx.restore();
+     }
+
+     /**
+      * 绘制脉冲圆环效果
+      */
+     drawPulseEffect(currentTime) {
+         this.ctx.save();
+         const centerX = this.canvasWidth / 2;
+         const centerY = this.canvasHeight / 2;
+         const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY);
+         
+         for (let i = 0; i < 3; i++) {
+             const progress = (currentTime * 0.0005 + i * 0.33) % 1;
+             const radius = progress * maxRadius;
+             const opacity = (1 - progress) * 0.15;
+             
+             this.ctx.beginPath();
+             this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+             this.ctx.strokeStyle = `rgba(0, 200, 255, ${opacity})`;
+             this.ctx.lineWidth = 2;
+             this.ctx.stroke();
+             
+             // 增加一个外发光圆环
+             this.ctx.beginPath();
+             this.ctx.arc(centerX, centerY, radius + 2, 0, Math.PI * 2);
+             this.ctx.strokeStyle = `rgba(0, 200, 255, ${opacity * 0.5})`;
+             this.ctx.lineWidth = 1;
+             this.ctx.stroke();
+         }
+         this.ctx.restore();
+     }
+
+     /**
+      * 绘制扫描线效果
+      */
+     drawScanLines(currentTime) {
+         this.ctx.save();
+         const lineGap = 4;
+         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+         this.ctx.lineWidth = 1;
+         
+         for (let y = 0; y < this.canvasHeight; y += lineGap) {
+             this.ctx.beginPath();
+             this.ctx.moveTo(0, y);
+             this.ctx.lineTo(this.canvasWidth, y);
+             this.ctx.stroke();
+         }
+         
+         // 动态扫描带
+         const scanY = (currentTime * 0.1) % (this.canvasHeight + 100) - 50;
+         const grad = this.ctx.createLinearGradient(0, scanY - 50, 0, scanY + 50);
+         grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+         grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.05)');
+         grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+         
+         this.ctx.fillStyle = grad;
+         this.ctx.fillRect(0, scanY - 50, this.canvasWidth, 100);
+         this.ctx.restore();
+     }
+
+     /**
+      * 绘制全息投影效果
+      */
+     drawHologramEffect(currentTime) {
+         this.ctx.save();
+         // 基础网格
+         this.drawGridLines(currentTime);
+         
+         // 随机干扰线
+         if (Math.random() > 0.9) {
+             const y = Math.random() * this.canvasHeight;
+             this.ctx.strokeStyle = 'rgba(0, 255, 255, 0.2)';
+             this.ctx.lineWidth = 0.5;
+             this.ctx.beginPath();
+             this.ctx.moveTo(0, y);
+             this.ctx.lineTo(this.canvasWidth, y);
+             this.ctx.stroke();
+         }
+         
+         // 动态光晕层
+         const pulse = Math.sin(currentTime * 0.002) * 0.05 + 0.1;
+         const grad = this.ctx.createRadialGradient(
+             this.canvasWidth / 2, this.canvasHeight / 2, 0,
+             this.canvasWidth / 2, this.canvasHeight / 2, this.canvasWidth
+         );
+         grad.addColorStop(0, `rgba(0, 255, 255, ${pulse})`);
+         grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+         this.ctx.fillStyle = grad;
+         this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
          
          this.ctx.restore();
      }
@@ -1612,10 +2335,24 @@ class DynamicRanking {
             // 重置花瓣状态
             this.petals = [];
             this.lastPetalSpawn = 0;
+            this.hearts = [];
+            this.lastHeartSpawn = 0;
             
             // 重置弹幕状态
             this.danmakuList = [];
             this.lastDanmakuSpawn = 0;
+
+            // 重置火箭状态
+            this.activeRockets = [];
+            this.rocketTriggered = false;
+            this.rocketLaunchCount = 0;
+            this.rocketWaveScheduled = false;
+            if (this._rocketSecondTimer) {
+                try { clearTimeout(this._rocketSecondTimer); } catch (e) {}
+                this._rocketSecondTimer = null;
+            }
+            this._rankAnimLast = null;
+            this.rankNumberAnimStart = 0;
 
             const animate = (currentTime) => {
                 // 如果既不是录制也不是预览模式，则停止动画
@@ -1674,33 +2411,26 @@ class DynamicRanking {
                 // 添加呼吸灯效果：全局背景光晕
                 this.drawBreathingEffect(currentTime);
 
-                // 新增：触发烟花逻辑改为在选定名次播放期间触发，并在全部完成后停止
+                // 优化：触发烟花逻辑
                 try {
                     const triggerRank = this.fireworksTriggerRank || 3;
-                    // 所有符合触发条件的项目（包括还没开始动画的项目）
-                    const allPotentialTriggerItems = this.animationItems.filter(it => it.displayRank <= triggerRank);
-                    // 已经在绘制的项目中符合触发条件的
-                    const triggerItems = allPotentialTriggerItems.filter(it => it._lastDrawPos);
+                    // 所有符合触发条件的项目（排名在前 X 名）
+                    const triggerItems = this.animationItems.filter(it => it.displayRank <= triggerRank);
                     
-                    const triggerItemsAnimating = triggerItems.length > 0 && triggerItems.some(it => it.animate);
-                    // 判定是否全部完成：所有潜在的触发项目都必须已动画且进度完成
-                    const triggerItemsAllDone = allPotentialTriggerItems.length > 0 && 
-                        allPotentialTriggerItems.every(it => it.animate && (currentTime - it.startTime >= this.flyInDuration));
+                    // 检查是否有符合条件的项目正在进行进场动画 (progress < 1.0)
+                    const isAnyTriggerItemInProgress = triggerItems.some(it => {
+                        if (!it.animate) return false;
+                        const itemElapsed = currentTime - it.startTime;
+                        return itemElapsed < this.flyInDuration;
+                    });
 
-                    // 在选定名次任一开始弹入时有概率启动烟花（只要用户启用）
-                    // 增加最小启动延迟，避免连续多次运行时立即触发烟花
-                    const FIREWORKS_MIN_START_DELAY = 150; // ms
-                    const FIREWORKS_CHANCE = 0.3; // 30%的概率触发烟花
-                    if (triggerItemsAnimating && this.fireworksEnabled && !this.fireworksActive && 
-                        (currentTime - this.animationStartTime) > FIREWORKS_MIN_START_DELAY &&
-                        Math.random() < FIREWORKS_CHANCE) {
-                        this.startFireworks();
-                    }
-
-                    // 在选定名次全部完成且没有未完成的火箭/粒子时停止烟花
-                    if (this.fireworksActive && triggerItemsAllDone && this.fireworkRockets.length === 0 && this.fireworkParticles.length === 0) {
-                        // 小缓冲，确保视觉完整
-                        setTimeout(() => this.stopFireworks(), 300);
+                    if (this.fireworksEnabled && isAnyTriggerItemInProgress) {
+                        if (!this.fireworksActive) {
+                            this.startFireworks();
+                        }
+                    } else if (this.fireworksActive) {
+                        // 如果没有符合条件的项目在进场，且烟花当前处于激活状态，则停止发射新火箭
+                        this.stopFireworks();
                     }
                 } catch (e) {
                     // ignore
@@ -1714,9 +2444,26 @@ class DynamicRanking {
 
                 // 更新并绘制花瓣特效（如果开启）
                 this.updateAndDrawPetals(currentTime);
+                this.updateAndDrawHearts(currentTime);
                 
                 // 更新并绘制弹幕（如果开启）
                 this.updateAndDrawDanmaku(currentTime);
+
+                // 触发火箭飞行特效（如果开启且未触发）
+                if (this.rocketEnabled && !this.rocketTriggered) {
+                    const rank3Item = this.animationItems.find(it => it.displayRank === 3);
+                    if (rank3Item && rank3Item.animate) {
+                        this.spawnRocket();
+                        this.rocketTriggered = true;
+                        this.rocketLaunchCount = 1;
+                        this.rocketWaveScheduled = false;
+                    }
+                }
+
+                // 更新并绘制火箭特效
+                this.updateAndDrawRockets(currentTime);
+
+                this.drawRankNumber(currentTime);
 
                 // 检查动画是否完成
                 const lastItem = this.animationItems[this.animationItems.length - 1];
@@ -1724,6 +2471,7 @@ class DynamicRanking {
                     const lastItemElapsed = currentTime - lastItem.startTime;
                     if (lastItemElapsed >= this.flyInDuration + 1000) {
                         // 最后一个项目动画完成，额外等待1秒
+                        this.animationFrameId = null;
                         this.stopRecording();
                         // 停止烟花（给一点缓冲时间）
                         setTimeout(() => this.stopFireworks(), 500);
@@ -1734,11 +2482,11 @@ class DynamicRanking {
 
                 // 继续动画循环
                 if (this.isRecording || this.isPreview) {
-                    requestAnimationFrame(animate);
+                    this.animationFrameId = requestAnimationFrame(animate);
                 }
             };
 
-            requestAnimationFrame(animate);
+            this.animationFrameId = requestAnimationFrame(animate);
         });
     }
 
@@ -1938,86 +2686,75 @@ class DynamicRanking {
      */
     clearCanvas() {
         if (!this.ctx) return;
+        this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+    }
 
-        // 保存当前变换状态
-        this.ctx.save();
+    /**
+     * 绘制静态一帧（用于设置预览）
+     */
+    draw() {
+        if (!this.ctx) return;
+        const currentTime = performance.now();
+        this.clearCanvas();
+        this.drawTechBackground(currentTime);
+        this.drawTitle();
         
-        // 重置变换到像素空间，绘制背景
-        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-
-        // 先绘制背景图（如果已加载）
-        if (this.bgImageObj) {
-            try {
-                const img = this.bgImageObj;
-                const imgW = img.naturalWidth || img.width;
-                const imgH = img.naturalHeight || img.height;
-
-                // 使用设备像素比
-                const dpr = Math.max(window.devicePixelRatio || 1, 1);
-                const destPixelW = Math.round(this.canvasWidth * dpr);
-                const destPixelH = Math.round(this.canvasHeight * dpr);
-
-                if (imgW > 0 && imgH > 0 && destPixelW > 0 && destPixelH > 0) {
-                    // 计算裁剪区域，实现 cover 效果
-                    const canvasRatio = destPixelW / destPixelH;
-                    const imgRatio = imgW / imgH;
-                    let sx = 0, sy = 0, sWidth = imgW, sHeight = imgH;
-
-                    if (imgRatio > canvasRatio) {
-                        // 图片更宽 -> 水平裁剪
-                        sHeight = imgH;
-                        sWidth = Math.round(imgH * canvasRatio);
-                        sx = Math.round((imgW - sWidth) / 2);
-                        sy = 0;
-                    } else {
-                        // 图片更高 -> 垂直裁剪
-                        sWidth = imgW;
-                        sHeight = Math.round(imgW / canvasRatio);
-                        sx = 0;
-                        sy = Math.round((imgH - sHeight) / 2);
-                    }
-
-                    // 绘制背景图到整个像素缓冲区
-                    this.ctx.globalAlpha = this.bgOpacity;
-                    this.ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, destPixelW, destPixelH);
-                    this.ctx.globalAlpha = 1;
-                } else {
-                    // 备用方案：直接拉伸绘制
-                    this.ctx.globalAlpha = this.bgOpacity;
-                    this.ctx.drawImage(img, 0, 0, destPixelW, destPixelH);
-                    this.ctx.globalAlpha = 1;
+        // 如果有动画条目，则绘制它们（以完成状态）
+        if (this.animationItems && this.animationItems.length > 0) {
+            this.animationItems.forEach(item => {
+                // 模拟已完成状态
+                item.animate = true;
+                item.startTime = currentTime - this.flyInDuration;
+                this.updateAnimationState(item, 1.0);
+            });
+            
+            if (this.animationType === 'squeeze') {
+                for (let i = this.animationItems.length - 1; i >= 0; i--) {
+                    this.drawItem(this.animationItems[i], currentTime);
                 }
-            } catch (e) {
-                console.warn('绘制背景图失败，使用渐变背景', e);
+            } else {
+                for (let i = 0; i < this.animationItems.length; i++) {
+                    this.drawItem(this.animationItems[i], currentTime);
+                }
             }
         }
+    }
 
-        // 恢复原来的变换状态（CSS像素空间）
-        this.ctx.restore();
+    /**
+     * 更新DOM标题展示
+     */
+    updateDOMTitle() {
+        if (!this.rankingTitle) return;
+        
+        // Use the current input value as fallback if this.title is not set yet
+        const currentTitle = this.title || (this.titleInput ? this.titleInput.value.trim() : '排行榜');
+        const hlText = this.titleHighlightText || '';
+        const hlColor = this.titleHighlightColor || '#ffd700';
+        const titleColor = this.titleColor || '#ffffff';
 
-        // 绘制半透明覆盖层，增强文字可读性
-        if (this.bgThemeEnabled) {
-            const currentTheme = this.backgroundThemes[this.backgroundColor] || this.backgroundThemes.dark;
-            const gradient = this.ctx.createLinearGradient(0, 0, this.canvasWidth, this.canvasHeight);
-            gradient.addColorStop(0, currentTheme.gradient[0]);
-            gradient.addColorStop(1, currentTheme.gradient[1]);
-            this.ctx.fillStyle = gradient;
-            
-            // 根据背景图透明度调整覆盖层透明度
-            const overlayAlpha = this.bgImageObj ? Math.max(0.15, 0.55 - this.bgOpacity * 0.5) : 0.8;
-            this.ctx.globalAlpha = overlayAlpha;
-            this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
-            
-            // 恢复默认透明度
-            this.ctx.globalAlpha = 1;
-        } else if (!this.bgImageObj) {
-            // 如果既没有背景主题也没有背景图，则绘制一个纯黑背景作为兜底
-            this.ctx.fillStyle = '#000000';
-            this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+        if (hlText && currentTitle.includes(hlText)) {
+            const parts = currentTitle.split(hlText);
+            this.rankingTitle.innerHTML = '';
+            for (let i = 0; i < parts.length; i++) {
+                if (parts[i] !== '') {
+                    const span = document.createElement('span');
+                    span.textContent = parts[i];
+                    span.style.color = titleColor;
+                    this.rankingTitle.appendChild(span);
+                }
+                if (i < parts.length - 1) {
+                    const span = document.createElement('span');
+                    span.textContent = hlText;
+                    span.style.color = hlColor;
+                    this.rankingTitle.appendChild(span);
+                }
+            }
+        } else {
+            this.rankingTitle.innerHTML = '';
+            this.rankingTitle.textContent = currentTitle;
+            this.rankingTitle.style.color = titleColor;
         }
-
-        // 确保清除画布后，全局透明度恢复为 1，避免影响后续绘制
-        this.ctx.globalAlpha = 1;
+        this.rankingTitle.style.fontSize = this.titleSize + 'px';
     }
 
     /**
@@ -2039,20 +2776,192 @@ class DynamicRanking {
         this.ctx.restore();
 
         // 标题文字
-        // use chosen title color (fallback to white)
         const titleColor = this.titleColor || '#ffffff';
-        this.ctx.fillStyle = titleColor;
+        const hlColor = this.titleHighlightColor || '#ffd700';
+        const hlText = this.titleHighlightText || '';
+        
         this.ctx.font = `bold ${this.titleSize || 32}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-        this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
         this.ctx.shadowBlur = 10;
         this.ctx.shadowOffsetY = 4;
-        this.ctx.fillText(this.title, this.canvasWidth / 2, titleY);
-        this.ctx.shadowColor = 'transparent';
 
-        // ensure DOM title color matches
-        if (this.rankingTitle) this.rankingTitle.style.color = this.titleColor || '#ffffff';
+        if (hlText && this.title.includes(hlText)) {
+            const parts = this.title.split(hlText);
+            let segments = [];
+            for (let i = 0; i < parts.length; i++) {
+                if (parts[i] !== '') segments.push({ text: parts[i], color: titleColor });
+                if (i < parts.length - 1) segments.push({ text: hlText, color: hlColor });
+            }
+
+            let totalWidth = 0;
+            segments.forEach(seg => {
+                totalWidth += this.ctx.measureText(seg.text).width;
+            });
+
+            let currentX = this.canvasWidth / 2 - totalWidth / 2;
+            this.ctx.textAlign = 'left';
+            segments.forEach(seg => {
+                this.ctx.fillStyle = seg.color;
+                this.ctx.fillText(seg.text, currentX, titleY);
+                currentX += this.ctx.measureText(seg.text).width;
+            });
+        } else {
+            this.ctx.fillStyle = titleColor;
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(this.title, this.canvasWidth / 2, titleY);
+        }
+
+        this.ctx.shadowColor = 'transparent';
+    }
+
+    drawRankNumber(currentTime) {
+        if (!this.rankNumberEnabled || !this.ctx || !this.animationItems || this.animationItems.length === 0) return;
+        let rankNum = null;
+        const inProgress = this.animationItems.find(it => it.animate && (currentTime - it.startTime) < this.flyInDuration);
+        if (inProgress) {
+            rankNum = inProgress.displayRank;
+        } else {
+            const elapsed = currentTime - this.animationStartTime;
+            const started = this.animationItems.filter(it => elapsed >= it.delay);
+            if (started.length === 0) return;
+            const last = started.reduce((a, b) => (a.popupRank > b.popupRank ? a : b));
+            rankNum = last.displayRank;
+        }
+        if (rankNum == null) return;
+
+        if (this._rankAnimLast !== rankNum) {
+            this._rankAnimLast = rankNum;
+            this.rankNumberAnimStart = currentTime;
+        }
+
+        const cx = this.canvasWidth / 2;
+        const cy = this.canvasHeight / 2;
+        const baseSize = Math.floor(Math.min(this.canvasWidth, this.canvasHeight) * 0.22);
+        const tRaw = Math.max(0, Math.min(1, (currentTime - this.rankNumberAnimStart) / (this.rankNumberAnimDuration || 900)));
+        const easeOutBack = (t) => {
+            const c1 = 1.70158;
+            const c3 = c1 + 1;
+            return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+        };
+        const e = easeOutBack(tRaw);
+        const flyOffset = Math.max(160, this.canvasHeight * 0.22);
+        const yPos = cy - (1 - e) * flyOffset;
+        const scale = 0.7 + e * 0.5;
+        const opacity = 0.6 + e * 0.4;
+        const theme = this.rankNumberThemePresets[this.rankNumberColorTheme] || this.rankNumberThemePresets['cyber-blue'];
+
+        this.ctx.save();
+        this.ctx.translate(cx, yPos);
+        this.ctx.scale(scale, scale);
+        this.ctx.globalAlpha = opacity;
+        const ringR = baseSize * 0.8;
+        this.ctx.save();
+        this.ctx.rotate((currentTime % 4000) / 4000 * Math.PI * 2);
+        this.ctx.setLineDash([10, 10]);
+        this.ctx.lineDashOffset = (currentTime % 1200) / 1200 * 20;
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeStyle = theme.ring;
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, ringR, 0, Math.PI * 2);
+        this.ctx.stroke();
+        this.ctx.restore();
+        this.ctx.save();
+        this.ctx.globalCompositeOperation = 'screen';
+        const glCount = 3;
+        for (let i = 0; i < glCount; i++) {
+            const ang = ((currentTime % 3000) / 3000) * Math.PI * 2 + i * (Math.PI * 2 / glCount);
+            this.ctx.lineWidth = 6;
+            this.ctx.strokeStyle = theme.ringGlow;
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, ringR, ang - 0.15, ang + 0.15);
+            this.ctx.stroke();
+        }
+        this.ctx.restore();
+        // 预底材质（去掉杂色偏移，仅保留纹理与发光）
+        const bufSize = Math.floor(baseSize * 1.4);
+        if (!this._rankBuf) this._rankBuf = document.createElement('canvas');
+        if (this._rankBuf.width !== bufSize || this._rankBuf.height !== bufSize) {
+            this._rankBuf.width = bufSize;
+            this._rankBuf.height = bufSize;
+        }
+        const bctx = this._rankBuf.getContext('2d');
+        bctx.clearRect(0, 0, bufSize, bufSize);
+        const g1 = bctx.createLinearGradient(0, 0, bufSize, bufSize);
+        g1.addColorStop(0, theme.texA);
+        g1.addColorStop(1, theme.texB);
+        bctx.fillStyle = g1;
+        bctx.fillRect(0, 0, bufSize, bufSize);
+        bctx.globalAlpha = 0.7;
+        bctx.strokeStyle = 'rgba(255,255,255,0.07)';
+        bctx.lineWidth = 1;
+        const hr = Math.max(6, Math.floor(bufSize / 30));
+        const hstepX = hr * 1.5;
+        const hstepY = Math.sqrt(3) * hr;
+        for (let row = -1; row < Math.ceil(bufSize / hstepY) + 2; row++) {
+            const y = row * hstepY;
+            const xOffset = (row % 2 === 0) ? 0 : hstepX / 2;
+            for (let col = -1; col < Math.ceil(bufSize / hstepX) + 2; col++) {
+                const cxh = col * hstepX + xOffset;
+                const cyh = y;
+                const vx = [hr, hr / 2, -hr / 2, -hr, -hr / 2, hr / 2];
+                const vy = [0, hstepY / 2, hstepY / 2, 0, -hstepY / 2, -hstepY / 2];
+                bctx.beginPath();
+                for (let k = 0; k < 6; k++) {
+                    const px = cxh + vx[k];
+                    const py = cyh + vy[k];
+                    if (k === 0) bctx.moveTo(px, py); else bctx.lineTo(px, py);
+                }
+                bctx.closePath();
+                bctx.stroke();
+            }
+        }
+        bctx.globalAlpha = 0.8;
+        bctx.globalCompositeOperation = 'destination-in';
+        bctx.fillStyle = '#fff';
+        bctx.textAlign = 'center';
+        bctx.textBaseline = 'middle';
+        bctx.font = `900 ${baseSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+        bctx.fillText(String(rankNum), bufSize / 2, bufSize / 2);
+        bctx.globalCompositeOperation = 'source-over';
+        this.ctx.drawImage(this._rankBuf, -bufSize / 2, -bufSize / 2);
+        const grad = this.ctx.createRadialGradient(0, -baseSize * 0.45, baseSize * 0.2, 0, 0, baseSize * 1.1);
+        grad.addColorStop(0, theme.g0);
+        grad.addColorStop(0.25, theme.g1);
+        grad.addColorStop(0.6, theme.g2);
+        grad.addColorStop(1, theme.g3);
+        this.ctx.lineWidth = 10;
+        this.ctx.strokeStyle = 'rgba(0,20,40,0.55)';
+        this.ctx.shadowBlur = 28;
+        this.ctx.shadowColor = theme.glow;
+        this.ctx.font = `900 ${baseSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.strokeText(String(rankNum), 0, 0);
+        this.ctx.fillStyle = grad;
+        this.ctx.fillText(String(rankNum), 0, 0);
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeStyle = theme.outline;
+        this.ctx.strokeText(String(rankNum), 0, 0);
+        this.ctx.shadowBlur = 0;
+        this.ctx.globalAlpha = Math.max(0, 0.22 * (1 - e));
+        this.ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        this.ctx.fillText(String(rankNum), 0, -20);
+        this.ctx.restore();
+
+        const haloRadius = baseSize * (0.9 + e * 0.2);
+        const halo = this.ctx.createRadialGradient(cx, yPos, 0, cx, yPos, haloRadius);
+        halo.addColorStop(0, theme.halo);
+        halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        this.ctx.save();
+        this.ctx.globalCompositeOperation = 'screen';
+        this.ctx.fillStyle = halo;
+        this.ctx.beginPath();
+        this.ctx.arc(cx, yPos, haloRadius, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.restore();
+
+        // 去除外部横向高亮线，保留纯净科技光晕
     }
 
     /**
@@ -2088,27 +2997,33 @@ class DynamicRanking {
         // 根据动画类型计算位置
         let drawY, drawX = 0;
 
-        switch (this.animationType) {
-            case 'squeeze':
-                // 挤压式：基于当前已显示的项目动态计算位置
+        // 如果是“从小到大”排序，所有动画类型都采用“顶部弹出并向下挤压”的逻辑
+        if (this.sortOrder === 'asc') {
+            const elapsed = performance.now() - this.animationStartTime;
+            let activePopupCount = 0;
+            this.animationItems.forEach(it => {
+                if (elapsed >= it.delay) activePopupCount++;
+            });
+            // 动态计算该项目当前应该在第几个位置（从上往下数）
+            const itemsAboveCurrent = activePopupCount - item.popupRank;
+            
+            // 计算基础 Y 坐标
+            drawY = startY + itemsAboveCurrent * (itemHeight + itemMargin);
+
+            // 如果是挤压式动画，额外添加滑入偏移
+            if (this.animationType === 'squeeze') {
                 const topOffset = -50 * (1 - easedProgress);
-                const itemsAboveCurrent = this.animationItems.filter(i => i.animate && i.popupRank > item.popupRank).length;
-                currentPosition = startY + itemsAboveCurrent * (itemHeight + itemMargin) + topOffset;
-                drawY = currentPosition;
-                break;
-            case 'fade':
-            case 'scale':
-            case 'flip':
-            case 'slide':
-            case 'elevator':
-            case 'glitch':
-            case 'scan':
-            case 'wave':
-            default:
-                // 其他动画类型：固定位置
-                drawY = startY + (item.displayRank - 1) * (itemHeight + itemMargin);
-                drawX = 0;
-                break;
+                drawY += topOffset;
+            }
+        } else {
+            // “从大到小”排序逻辑：最大的先出现在最上方，后续项目直接在下方出现，不移动
+            drawY = startY + (item.displayRank - 1) * (itemHeight + itemMargin);
+
+            // 如果是挤压式动画，额外添加滑入偏移
+            if (this.animationType === 'squeeze') {
+                const topOffset = -50 * (1 - easedProgress);
+                drawY += topOffset;
+            }
         }
 
         const y = drawY;
@@ -2199,15 +3114,17 @@ class DynamicRanking {
             barGradient.addColorStop(0.5, '#8B4513');
             barGradient.addColorStop(1, '#654321');
         } else {
-            // 其他排名：基于随机颜色的丰富渐变
+            // 其他排名：更丰富的多点渐变
             const baseHue = item.color.h;
             const baseSaturation = item.color.s;
             const baseLightness = item.color.l;
             
             barGradient = this.ctx.createLinearGradient(20, y, 20 + barWidth, y);
-            barGradient.addColorStop(0, `hsl(${baseHue}, ${baseSaturation}%, ${baseLightness + 10}%)`);
-            barGradient.addColorStop(0.5, `hsl(${baseHue}, ${baseSaturation}%, ${baseLightness}%)`);
-            barGradient.addColorStop(1, `hsl(${baseHue}, ${baseSaturation}%, ${baseLightness - 15}%)`);
+            // 采用更具立体感的 4 点渐变逻辑
+            barGradient.addColorStop(0, `hsl(${baseHue}, ${baseSaturation}%, ${baseLightness + 15}%)`); // 亮端
+            barGradient.addColorStop(0.3, `hsl(${baseHue}, ${baseSaturation}%, ${baseLightness + 5}%)`);
+            barGradient.addColorStop(0.7, `hsl(${baseHue}, ${baseSaturation}%, ${baseLightness - 10}%)`);
+            barGradient.addColorStop(1, `hsl(${baseHue}, ${baseSaturation}%, ${baseLightness - 20}%)`); // 暗端
         }
 
         // 绘制条形图背景
@@ -2250,31 +3167,65 @@ class DynamicRanking {
         // 绘制名称和数值
         this.ctx.fillStyle = '#ffffff';
         this.ctx.textAlign = 'left';
-        this.ctx.font = '600 20px -apple-system, sans-serif';
+        this.ctx.font = `600 ${this.nameSize}px -apple-system, sans-serif`;
         this.ctx.fillText(item.name, 55, y + itemHeight / 2);
+        
+        // 绘制星座图标
+        if (this.zodiacEnabled && this.zodiacSigns[item.name]) {
+            const nameWidth = this.ctx.measureText(item.name).width;
+            const iconX = 55 + nameWidth + 10;
+            this.ctx.save();
+            this.ctx.font = `${itemHeight - 6}px -apple-system, sans-serif`;
+            this.ctx.fillStyle = '#FFD700'; // 金色图标
+            this.ctx.textBaseline = 'middle';
+            // 增加 +3px 偏移量以修正 Emoji 垂直对齐偏上的问题
+            this.ctx.fillText(this.zodiacSigns[item.name], iconX, y + itemHeight / 2 + 3);
+            this.ctx.restore();
+        }
         if (this.animationType === 'glitch') {
             const shift = Math.max(1, Math.abs(item.currentX || 0) * 0.15);
             this.ctx.save();
             this.ctx.globalCompositeOperation = 'screen';
             this.ctx.globalAlpha = 0.8; // 固定透明度，不再随项目透明度变化
             this.ctx.fillStyle = 'rgba(0, 255, 255, 0.7)';
+            this.ctx.font = `600 ${this.nameSize}px -apple-system, sans-serif`;
             this.ctx.fillText(item.name, 55 + shift, y + itemHeight / 2 - 1);
+            
+            // 绘制星座图标 (glitch cyan)
+            if (this.zodiacEnabled && this.zodiacSigns[item.name]) {
+                const nameWidth = this.ctx.measureText(item.name).width;
+                const iconX = 55 + nameWidth + 10;
+                this.ctx.font = `${itemHeight - 6}px -apple-system, sans-serif`;
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(this.zodiacSigns[item.name], iconX + shift, y + itemHeight / 2 + 3);
+            }
+            
             this.ctx.fillStyle = 'rgba(255, 0, 128, 0.6)';
+            this.ctx.font = `600 ${this.nameSize}px -apple-system, sans-serif`;
             this.ctx.fillText(item.name, 55 - shift, y + itemHeight / 2 + 1);
+            
+            // 绘制星座图标 (glitch magenta)
+            if (this.zodiacEnabled && this.zodiacSigns[item.name]) {
+                const nameWidth = this.ctx.measureText(item.name).width;
+                const iconX = 55 + nameWidth + 10;
+                this.ctx.font = `${itemHeight - 6}px -apple-system, sans-serif`;
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(this.zodiacSigns[item.name], iconX - shift, y + itemHeight / 2 + 4);
+            }
             this.ctx.restore();
         }
 
         // 数值绘制（根据设置决定位置和是否显示）
-        if (this.showValues !== false) {
+        if (this.showValues !== false && this.valuePosition !== 'none') {
+            const isTop2 = item.displayRank <= 2 && this.nonTopTwoOutside;
+            const effectivePosition = isTop2 ? 'inside-bar' : this.valuePosition;
+            
             this.ctx.fillStyle = this.valueColor || '#ffffff';
             this.ctx.globalAlpha = 1.0; // 文字保持完全不透明，不受背景透明度影响
             this.ctx.font = '20px -apple-system, sans-serif';
             
             let valueX;
-            // 特殊规则：前二名始终在条形图末端（内部），其他排名根据配置决定
-            const isTop2 = item.displayRank <= 2 && this.nonTopTwoOutside;
-            const effectivePosition = isTop2 ? 'inside-bar' : this.valuePosition;
-
+            // 根据有效位置决定绘制逻辑
             if (effectivePosition === 'outside-bar') {
                 this.ctx.textAlign = 'left';
                 // 计算数值的最大宽度，用于确定对齐起点
@@ -2591,40 +3542,32 @@ class DynamicRanking {
 
         const now = currentTime;
 
-        // 如果烟花激活且在持续期内，按间隔生成火箭朝前三名位置发射
+        // 如果烟花激活，按间隔生成火箭朝前三名位置发射
         if (this.fireworksActive) {
-            const elapsed = now - this.fireworksStartTime;
-            // 烟花持续时间也随密度略微增加
-            const effectiveDuration = this.fireworksDuration * (1 + (this.fireworksDensity || 5) / 10);
-            if (elapsed < effectiveDuration) {
-                if (now - this.lastFireworkSpawn > this.fireworkSpawnInterval) {
-                    const triggerRank = this.fireworksTriggerRank || 3;
-                    const triggerItems = this.animationItems.filter(it => it.displayRank <= triggerRank && it._lastDrawPos);
-                    // 每次发射的火箭数量也随密度增加
-                    const rocketsToSpawn = Math.max(1, Math.floor((this.fireworksDensity || 5) / 3));
-                    
-                    for (let s = 0; s < rocketsToSpawn; s++) {
-                        if (triggerItems.length > 0) {
-                            // 随机选择触发名次中的一个发射火箭
-                            const randomIndex = Math.floor(Math.random() * triggerItems.length);
-                            const posItem = triggerItems[randomIndex];
-                            // 将烟花发射位置调整到画布水平中心区域，而不是条形图中心点
-                            // 这样即便条形图很短，烟花也会在中间播放
-                            const centerX = this.canvasWidth / 2;
-                            const spread = 400; // 水平分布范围
-                            const targetX = centerX + (Math.random() - 0.5) * spread;
-                            this.spawnRocketTowards(targetX, posItem._lastDrawPos.y, posItem.displayRank);
-                        } else {
-                            const rx = 100 + Math.random() * (this.canvasWidth - 200);
-                            const ry = 80 + Math.random() * (this.canvasHeight / 2);
-                            this.spawnRocketTowards(rx, ry);
-                        }
+            if (now - this.lastFireworkSpawn > this.fireworkSpawnInterval) {
+                const triggerRank = this.fireworksTriggerRank || 3;
+                const triggerItems = this.animationItems.filter(it => it.displayRank <= triggerRank && it._lastDrawPos);
+                // 每次发射的火箭数量也随密度增加
+                const rocketsToSpawn = Math.max(1, Math.floor((this.fireworksDensity || 5) / 3));
+                
+                for (let s = 0; s < rocketsToSpawn; s++) {
+                    if (triggerItems.length > 0) {
+                        // 随机选择触发名次中的一个发射火箭
+                        const randomIndex = Math.floor(Math.random() * triggerItems.length);
+                        const posItem = triggerItems[randomIndex];
+                        // 将烟花发射位置调整到画布水平中心区域，而不是条形图中心点
+                        // 这样即便条形图很短，烟花也会在中间播放
+                        const centerX = this.canvasWidth / 2;
+                        const spread = 400; // 水平分布范围
+                        const targetX = centerX + (Math.random() - 0.5) * spread;
+                        this.spawnRocketTowards(targetX, posItem._lastDrawPos.y, posItem.displayRank);
+                    } else {
+                        const rx = 100 + Math.random() * (this.canvasWidth - 200);
+                        const ry = 80 + Math.random() * (this.canvasHeight / 2);
+                        this.spawnRocketTowards(rx, ry);
                     }
-                    this.lastFireworkSpawn = now;
                 }
-            } else {
-                // 停止继续发射，但允许现有火箭与粒子完成动画
-                this.fireworksActive = false;
+                this.lastFireworkSpawn = now;
             }
         }
 
@@ -2843,6 +3786,11 @@ class DynamicRanking {
                             this.rankingBgImageEl.style.display = (this.bgOpacity > 0) ? 'block' : 'none';
                         }
                         console.log('背景图已加载 (dataURL)', file.name);
+                        
+                        // 实时预览更新
+                        if (this.isPreview || this.isRecording) {
+                            this.draw();
+                        }
                     };
                     img.onerror = (err) => {
                         console.error('背景图 Image 加载失败', err);
@@ -3168,6 +4116,84 @@ class DynamicRanking {
         this.ctx.fill();
         this.ctx.restore();
     }
+
+    updateAndDrawHearts(currentTime) {
+        if (!this.heartsEnabled || !this.ctx) return;
+        if (currentTime - this.lastHeartSpawn > this.heartSpawnInterval && this.hearts.length < 8) {
+            this.spawnHeart();
+            this.lastHeartSpawn = currentTime;
+        }
+        for (let i = this.hearts.length - 1; i >= 0; i--) {
+            const heart = this.hearts[i];
+            heart.age += 16;
+            heart.y -= heart.vy;
+            heart.x += Math.sin(heart.age * 0.003 + heart.swingOffset) * heart.swingAmp;
+            heart.rotation += heart.rotationSpeed;
+            heart.scale += 0.002;
+            const endY = -heart.size * 1.2;
+            const totalTravel = Math.max(1, heart.startY - endY);
+            const traveled = heart.startY - heart.y;
+            const progress = Math.max(0, Math.min(1, traveled / totalTravel));
+            const fadeStart = 0.55;
+            if (progress <= fadeStart) {
+                heart.alpha = 1;
+            } else {
+                heart.alpha = Math.max(0, 1 - ((progress - fadeStart) / (1 - fadeStart)));
+            }
+            if (heart.alpha <= 0 || heart.y <= endY) {
+                this.hearts.splice(i, 1);
+                continue;
+            }
+            this.drawHeart(heart);
+        }
+    }
+
+    spawnHeart() {
+        const colors = ['#ff4d8d', '#ff6fa8', '#ff8ec4', '#ff3d6e', '#ffa1cf'];
+        const size = 12 + Math.random() * 18;
+        const initialY = this.canvasHeight + 30 + Math.random() * 40;
+        this.hearts.push({
+            id: Math.random(),
+            x: 20 + Math.random() * Math.max(20, this.canvasWidth - 40),
+            y: initialY,
+            startY: initialY,
+            vy: 0.9 + Math.random() * 1.4,
+            size: size,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            alpha: 1,
+            age: 0,
+            life: 3200 + Math.random() * 1800,
+            swingAmp: 0.4 + Math.random() * 1.6,
+            swingOffset: Math.random() * Math.PI * 2,
+            rotation: (Math.random() - 0.5) * 0.2,
+            rotationSpeed: (Math.random() - 0.5) * 0.01,
+            scale: 0.8 + Math.random() * 0.5
+        });
+    }
+
+    drawHeart(heart) {
+        this.ctx.save();
+        this.ctx.translate(heart.x, heart.y);
+        this.ctx.rotate(heart.rotation);
+        this.ctx.scale(heart.scale, heart.scale);
+        this.ctx.globalAlpha = heart.alpha;
+        const s = heart.size;
+        this.ctx.shadowColor = 'rgba(255, 100, 170, 0.55)';
+        this.ctx.shadowBlur = 14;
+        this.ctx.fillStyle = heart.color;
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, s * 0.9);
+        this.ctx.bezierCurveTo(s * 1.2, s * 0.2, s * 1.1, -s * 0.9, 0, -s * 0.35);
+        this.ctx.bezierCurveTo(-s * 1.1, -s * 0.9, -s * 1.2, s * 0.2, 0, s * 0.9);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.globalAlpha = heart.alpha * 0.5;
+        this.ctx.fillStyle = '#ffe6f2';
+        this.ctx.beginPath();
+        this.ctx.arc(-s * 0.3, -s * 0.25, s * 0.2, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.restore();
+    }
     
     /**
      * 更新并绘制弹幕
@@ -3190,14 +4216,21 @@ class DynamicRanking {
             
             // 实现轮播效果：当弹幕超出屏幕右侧时，重新从左侧进入
             if (danmaku.x > this.canvasWidth + 100) {
-                // 重新定位到左侧，并随机选择新的弹幕内容，使用空格分隔
-                const danmakuTexts = this.danmakuContent.split(' ').map(text => text.trim()).filter(text => text.length > 0);
+                // 重新定位到左侧，并随机选择新的弹幕内容，支持换行或空格分隔
+                const danmakuTexts = this.danmakuContent.split(/[\n\s]+/).map(text => text.trim()).filter(text => text.length > 0);
                 if (danmakuTexts.length > 0) {
                     danmaku.text = danmakuTexts[Math.floor(Math.random() * danmakuTexts.length)];
                 }
                 danmaku.x = -200; // 重新从左侧外进入
                 danmaku.y = 50 + Math.random() * (this.canvasHeight - 100); // 随机垂直位置
                 danmaku.speed = 0.5 + Math.random() * 1; // 随机速度
+                
+                // 更新样式（以便实时预览变化）
+                danmaku.size = this.danmakuSize;
+                danmaku.color = this.danmakuColor;
+                danmaku.bold = this.danmakuBold;
+                danmaku.italic = this.danmakuItalic;
+                danmaku.underline = this.danmakuUnderline;
                 continue;
             }
 
@@ -3210,8 +4243,8 @@ class DynamicRanking {
      * 生成单个弹幕
      */
     spawnDanmaku() {
-        // 解析弹幕内容，使用空格分隔
-        const danmakuTexts = this.danmakuContent.split(' ').map(text => text.trim()).filter(text => text.length > 0);
+        // 解析弹幕内容，支持换行或空格分隔
+        const danmakuTexts = this.danmakuContent.split(/[\n\s]+/).map(text => text.trim()).filter(text => text.length > 0);
         if (danmakuTexts.length === 0) return;
         
         // 随机选择一条弹幕内容
@@ -3228,7 +4261,10 @@ class DynamicRanking {
             y: y,
             speed: speed,
             color: this.danmakuColor,
-            size: this.danmakuSize
+            size: this.danmakuSize,
+            bold: this.danmakuBold,
+            italic: this.danmakuItalic,
+            underline: this.danmakuUnderline
         });
     }
     
@@ -3238,13 +4274,44 @@ class DynamicRanking {
     drawDanmaku(danmaku) {
         this.ctx.save();
         
+        // 构建字体样式字符串
+        let fontStyle = '';
+        if (danmaku.italic) fontStyle += 'italic ';
+        if (danmaku.bold) fontStyle += 'bold ';
+        
         // 设置字体和颜色
-        this.ctx.font = `${danmaku.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+        this.ctx.font = `${fontStyle}${danmaku.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
         this.ctx.fillStyle = danmaku.color;
         this.ctx.textAlign = 'left';
         this.ctx.textBaseline = 'middle';
         
-        // 添加文字阴影，增强可读性
+        // 测量文本宽度以绘制线框
+        const textMetrics = this.ctx.measureText(danmaku.text);
+        const textWidth = textMetrics.width;
+        const paddingH = 15; // 水平内边距
+        const paddingV = 8;  // 垂直内边距
+        const height = danmaku.size + paddingV * 2;
+        const width = textWidth + paddingH * 2;
+        
+        // 绘制胶囊线框
+        this.ctx.beginPath();
+        const rectX = danmaku.x - paddingH;
+        const rectY = danmaku.y - height / 2;
+        this.ctx.roundRect(rectX, rectY, width, height, height / 2);
+        
+        // 线框样式
+        this.ctx.strokeStyle = danmaku.color;
+        this.ctx.lineWidth = 1.5;
+        this.ctx.globalAlpha = 0.6; // 线框稍微透明一点
+        this.ctx.stroke();
+        
+        // 背景填充（可选，增加可读性）
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        this.ctx.fill();
+        
+        // 恢复透明度并设置阴影绘制文字
+        this.ctx.globalAlpha = 1.0;
+        this.ctx.fillStyle = danmaku.color;
         this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
         this.ctx.shadowBlur = 5;
         this.ctx.shadowOffsetY = 2;
@@ -3252,7 +4319,141 @@ class DynamicRanking {
         // 绘制弹幕文本
         this.ctx.fillText(danmaku.text, danmaku.x, danmaku.y);
         
+        // 如果有下划线
+        if (danmaku.underline) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(danmaku.x, danmaku.y + danmaku.size / 2 + 2);
+            this.ctx.lineTo(danmaku.x + textWidth, danmaku.y + danmaku.size / 2 + 2);
+            this.ctx.strokeStyle = danmaku.color;
+            this.ctx.lineWidth = 1;
+            this.ctx.stroke();
+        }
+        
         this.ctx.restore();
+    }
+
+    /**
+     * 生成火箭编队 (1个大火箭 + 2个侧翼小火箭)
+     */
+    spawnRocket() {
+        if (!this.rocketEnabled) return;
+        
+        const centerX = this.canvasWidth / 2;
+        const baseY = this.canvasHeight + 150;
+        const baseSpeed = 6 + Math.random() * 2;
+
+        // 1. 主火箭 (居中)
+        this.activeRockets.push({
+            id: Math.random(),
+            x: centerX,
+            y: baseY,
+            speed: baseSpeed,
+            size: 80,
+            isMain: true
+        });
+
+        // 2. 左侧翼小火箭
+        this.activeRockets.push({
+            id: Math.random(),
+            x: centerX - 100,
+            y: baseY + 50, // 稍微靠后一点
+            speed: baseSpeed,
+            size: 50,
+            isMain: false
+        });
+
+        // 3. 右侧翼小火箭
+        this.activeRockets.push({
+            id: Math.random(),
+            x: centerX + 100,
+            y: baseY + 50, // 稍微靠后一点
+            speed: baseSpeed,
+            size: 50,
+            isMain: false
+        });
+    }
+
+    /**
+     * 更新并绘制火箭飞行特效
+     */
+    updateAndDrawRockets(currentTime) {
+        if (!this.rocketEnabled || !this.ctx) return;
+        if (this.activeRockets.length === 0) {
+            if (this.rocketTriggered && this.rocketLaunchCount === 1 && !this.rocketWaveScheduled) {
+                this.rocketWaveScheduled = true;
+                this._rocketSecondTimer = setTimeout(() => {
+                    try {
+                        this.spawnRocket();
+                        this.rocketLaunchCount = 2;
+                    } catch (e) {}
+                }, 1000);
+            }
+            return;
+        }
+
+        for (let i = this.activeRockets.length - 1; i >= 0; i--) {
+            const rocket = this.activeRockets[i];
+            
+            // 向上飞行
+            rocket.y -= rocket.speed;
+            
+            // 绘制火箭主体
+            this.ctx.save();
+            this.ctx.translate(rocket.x, rocket.y);
+            
+            // 轻微左右摇摆增加动感
+            const jitter = Math.sin(currentTime * 0.01) * 2;
+            this.ctx.translate(jitter, 0);
+            
+            // 绘制火箭尾焰特效 (在火箭下方)
+            this.ctx.save();
+            // 多层火焰效果
+            for (let j = 0; j < 3; j++) {
+                const flamePulse = Math.sin(currentTime * 0.05 + j) * 8;
+                const flameScale = 0.5 + Math.sin(currentTime * 0.03 + j) * 0.2;
+                const opacity = 0.4 + Math.random() * 0.4;
+                
+                this.ctx.save();
+                this.ctx.globalAlpha = opacity;
+                this.ctx.font = `${rocket.size * flameScale}px -apple-system, sans-serif`;
+                // 垂直向下偏移绘制火焰
+                this.ctx.fillText('🔥', 0, rocket.size * 0.5 + flamePulse + (j * 10));
+                this.ctx.restore();
+            }
+            
+            // 绘制喷气粒子感（点状）
+            const particleCount = 5;
+            for (let k = 0; k < particleCount; k++) {
+                const px = (Math.random() - 0.5) * 20;
+                const py = rocket.size * 0.6 + Math.random() * 40;
+                const pSize = 2 + Math.random() * 4;
+                this.ctx.fillStyle = Math.random() > 0.5 ? '#ff9d00' : '#ff4500';
+                this.ctx.beginPath();
+                this.ctx.arc(px, py, pSize, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+            this.ctx.restore();
+
+            // 绘制火箭图标
+            this.ctx.save();
+            // 🚀 图标通常倾斜 45 度，我们需要逆时针旋转使其垂直
+            // 注意：不同系统/字体可能略有差异，通常 -45deg (-Math.PI/4) 能纠正大部分
+            this.ctx.rotate(-Math.PI / 4);
+            
+            this.ctx.font = `${rocket.size}px -apple-system, sans-serif`;
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            // 旋转后，坐标轴也变了，由于图标中心对齐，我们直接在 (0,0) 绘制
+            this.ctx.fillText('🚀', 0, 0);
+            this.ctx.restore();
+            
+            this.ctx.restore();
+            
+            // 如果飞出顶部则从数组移除
+            if (rocket.y < -200) {
+                this.activeRockets.splice(i, 1);
+            }
+        }
     }
 }
 
@@ -3269,7 +4470,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
             // Fallback global listeners to ensure responsiveness
             const runBtnFallback = document.getElementById('run-animation');
-            if (runBtnFallback) {
+            if (runBtnFallback && !(window.dynamicRanking && (window.dynamicRanking._runBtnBound || runBtnFallback.dataset.drBound === '1'))) {
                 runBtnFallback.addEventListener('click', () => {
                     console.log('fallback run button clicked');
                     try {
@@ -3278,9 +4479,10 @@ window.addEventListener('DOMContentLoaded', () => {
                         console.error(err);
                     }
                 });
+                if (window.dynamicRanking) window.dynamicRanking._runBtnBound = true;
             }
             const previewBtnFallback = document.getElementById('preview-animation');
-            if (previewBtnFallback) {
+            if (previewBtnFallback && !(window.dynamicRanking && (window.dynamicRanking._previewBtnBound || previewBtnFallback.dataset.drBound === '1'))) {
                 previewBtnFallback.addEventListener('click', () => {
                     console.log('fallback preview button clicked');
                     try {
@@ -3289,6 +4491,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         console.error(err);
                     }
                 });
+                if (window.dynamicRanking) window.dynamicRanking._previewBtnBound = true;
             }
         } catch (err) {
             // ignore
@@ -3326,4 +4529,3 @@ window.addEventListener('beforeunload', () => {
         // ignore
     }
 });
-

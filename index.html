@@ -92,18 +92,26 @@
                         <div class="settings-grid">
                             <div class="setting-item">
                                 <label for="title-input">排行榜标题</label>
-                                <input type="text" id="title-input" placeholder="输入排行榜标题" value="十二星座动态排行榜">
+                                <input type="text" id="title-input" placeholder="输入排行榜标题" value="十二星座排行榜">
                             </div>
                             <div class="setting-item">
                                 <label for="title-size-input">标题大小</label>
                                 <div class="range-with-value">
-                                    <input type="range" id="title-size-input" min="12" max="64" value="24">
-                                    <span id="title-size-value">24px</span>
+                                    <input type="range" id="title-size-input" min="12" max="64" value="30">
+                                    <span id="title-size-value">30px</span>
                                 </div>
                             </div>
                             <div class="setting-item">
                                 <label for="title-color-input">标题颜色</label>
                                 <input type="color" id="title-color-input" value="#ffffff">
+                            </div>
+                            <div class="setting-item">
+                                <label for="title-highlight-text-input">高亮文字</label>
+                                <input type="text" id="title-highlight-text-input" placeholder="输入要高亮的文字">
+                            </div>
+                            <div class="setting-item">
+                                <label for="title-highlight-color-input">高亮颜色</label>
+                                <input type="color" id="title-highlight-color-input" value="#ffd700">
                             </div>
                         </div>
                     </div>
@@ -135,12 +143,26 @@
                                     <option value="purple">科技紫</option>
                                     <option value="green">科技绿</option>
                                     <option value="red">科技红</option>
-                                    <option value="cyber">赛博朋克</option>
-                                    <option value="space">太空深蓝</option>
+                                    <option value="cyan">青色</option>
+                                    <option value="rose">玫瑰色</option>
+                                    <option value="orange">橙色</option>
+                                    <option value="yellow">黄色</option>
+                                    <option value="silver">银色</option>
                                     <option value="matrix">矩阵网格 (静态)</option>
                                     <option value="circuit">电子电路 (静态)</option>
                                     <option value="blueprint">蓝图设计 (静态)</option>
                                     <option value="nebula">深邃星云 (静态)</option>
+                                    <option value="hexagon">六边形蜂巢 (静态)</option>
+                                    <option value="radar">雷达扫描 (静态)</option>
+                                    <option value="cybergrid">赛博网格 (静态)</option>
+                                    <option value="techchip">芯片电路 (静态)</option>
+                                    <option value="neonlines">霓虹线条 (静态)</option>
+                                    <option value="perspective">透视网格 (静态)</option>
+                                    <option value="deepsea">深海科技 (动态)</option>
+                                    <option value="spacestation">核心舱 (动态)</option>
+                                    <option value="cyberpulse">赛博脉冲 (动态)</option>
+                                    <option value="datasequence">数据流 (动态)</option>
+                                    <option value="hologram">全息投影 (动态)</option>
                                 </select>
                             </div>
                         </div>
@@ -172,9 +194,27 @@
                             <div class="setting-item">
                                 <label>排序方式</label>
                                 <div class="radio-group">
-                                    <label><input type="radio" name="sort-order" value="desc" checked> 从大到小</label>
-                                    <label><input type="radio" name="sort-order" value="asc"> 从小到大</label>
+                                    <label><input type="radio" name="sort-order" value="desc"> 从大到小</label>
+                                    <label><input type="radio" name="sort-order" value="asc" checked> 从小到大</label>
                                 </div>
+                            </div>
+                            <div class="setting-item">
+                                <label>名次展示</label>
+                                <div class="radio-group">
+                                    <label><input type="radio" name="rank-number-enable" value="on" checked> 开启</label>
+                                    <label><input type="radio" name="rank-number-enable" value="off"> 关闭</label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <label for="rank-number-color-theme">名次配色</label>
+                                <select id="rank-number-color-theme">
+                                    <option value="cyber-blue" selected>赛博蓝</option>
+                                    <option value="neon-pink">霓虹粉紫</option>
+                                    <option value="aurora-green">极光青绿</option>
+                                    <option value="golden-core">鎏金能量</option>
+                                    <option value="ice-silver">冰晶银蓝</option>
+                                    <option value="lava-red">熔岩红橙</option>
+                                </select>
                             </div>
                             <div class="setting-item">
                                 <label>随机红包</label>
@@ -189,6 +229,21 @@
                                 <div class="radio-group">
                                     <label><input type="radio" name="petals-enable" value="on"> 开启</label>
                                     <label><input type="radio" name="petals-enable" value="off" checked> 关闭</label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <label>爱心</label>
+                                <div class="radio-group">
+                                    <label><input type="radio" name="hearts-enable" value="on"> 是</label>
+                                    <label><input type="radio" name="hearts-enable" value="off" checked> 否</label>
+                                </div>
+                            </div>
+
+                            <div class="setting-item">
+                                <label>星座图标</label>
+                                <div class="radio-group">
+                                    <label><input type="radio" name="zodiac-enable" value="on" checked> 开启</label>
+                                    <label><input type="radio" name="zodiac-enable" value="off"> 关闭</label>
                                 </div>
                             </div>
                         </div>
@@ -215,8 +270,8 @@
                                 <div class="setting-item">
                                     <label for="fireworks-density">烟花密度</label>
                                     <div class="range-with-value">
-                                        <input type="range" id="fireworks-density" min="1" max="10" value="5">
-                                        <span id="fireworks-density-display">5</span>
+                                        <input type="range" id="fireworks-density" min="1" max="10" value="7">
+                                        <span id="fireworks-density-display">7</span>
                                     </div>
                                 </div>
                                 <div class="setting-item">
@@ -230,6 +285,13 @@
                                     </select>
                                 </div>
                             </div>
+                            <div class="setting-item">
+                                <label>火箭飞行特效</label>
+                                <div class="radio-group">
+                                    <label><input type="radio" name="rocket-enable" value="on"> 开启</label>
+                                    <label><input type="radio" name="rocket-enable" value="off" checked> 关闭</label>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -240,8 +302,9 @@
                             <div class="setting-item">
                                 <label>显示位置</label>
                                 <div class="radio-group">
-                                    <label><input type="radio" name="value-position" value="inside-bar" checked> 条形内</label>
-                                    <label><input type="radio" name="value-position" value="outside-bar"> 条形外</label>
+                                    <label><input type="radio" name="value-position" value="inside-bar"> 条形内</label>
+                                    <label><input type="radio" name="value-position" value="outside-bar" checked> 条形外</label>
+                                    <label><input type="radio" name="value-position" value="none"> 不显示</label>
                                 </div>
                             </div>
                             <div class="setting-item">
@@ -252,6 +315,20 @@
                                 <label for="non-top-two-outside">特殊规则</label>
                                 <div class="checkbox-group">
                                     <label><input type="checkbox" id="non-top-two-outside" checked> 条形外仅影响非前两名</label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <label for="name-size-input">名称字体大小</label>
+                                <div class="range-with-value">
+                                    <input type="range" id="name-size-input" min="12" max="36" value="20">
+                                    <span id="name-size-value">20px</span>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <label for="desc-size-input">描述字体大小</label>
+                                <div class="range-with-value">
+                                    <input type="range" id="desc-size-input" min="10" max="24" value="16">
+                                    <span id="desc-size-value">16px</span>
                                 </div>
                             </div>
                         </div>
@@ -275,13 +352,25 @@
                             <div class="setting-item">
                                 <label for="danmaku-size-input">字体大小</label>
                                 <div class="range-with-value">
-                                    <input type="range" id="danmaku-size-input" min="12" max="36" value="20">
-                                    <span id="danmaku-size-value">20px</span>
+                                    <input type="range" id="danmaku-size-input" min="12" max="36" value="15">
+                                    <span id="danmaku-size-value">15px</span>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <label>字体样式</label>
+                                <div class="checkbox-group">
+                                    <label><input type="checkbox" id="danmaku-bold" checked> 加粗</label>
+                                    <label><input type="checkbox" id="danmaku-italic"> 斜体</label>
+                                    <label><input type="checkbox" id="danmaku-underline"> 下划线</label>
                                 </div>
                             </div>
                             <div class="setting-item">
                                 <label for="danmaku-content">弹幕内容</label>
-                                <input type="text" id="danmaku-content" placeholder="输入弹幕内容，用空格分隔多个弹幕" value="太棒了 恭喜 加油 优秀 厉害">
+                                <textarea id="danmaku-content" rows="4" placeholder="每行输入一条弹幕内容">太棒了
+恭喜
+加油
+优秀
+厉害</textarea>
                             </div>
                         </div>
                     </div>
