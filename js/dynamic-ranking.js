@@ -1,3 +1,5 @@
+const { backgroundThemes, zodiacSigns, rankNumberThemePresets } = window.__dynamicRankingConstants;
+
 /**
  * 动态排行榜生成器
  * 支持从小到大的动态排序动画
@@ -25,8 +27,6 @@ class DynamicRanking {
         this.animationItems = []; // 存储带动画状态的项目
         this.animationStartTime = 0;
         this.animationFrameId = null; // 用于存储 requestAnimationFrame 的 ID
-        this.initElements();
-        this.initEventListeners();
 
         // 背景图支持
         this.bgImageUrl = null; // Object URL
@@ -78,78 +78,23 @@ class DynamicRanking {
 
         // 科技感效果参数
         this.techEnabled = true; // 是否启用科技感效果
-        this.techParticles = []; // 科技感粒子系统
-        this.digitalRainChars = []; // 数字雨字符
-        this.gridLines = []; // 网格线
-        this.energyParticles = []; // 能量粒子
-        this.starParticles = []; // 星光粒子
-        
-        // 背景色参数
-        this.backgroundColor = 'blue'; // 默认背景色主题
-        this.backgroundThemes = {
-            none: { name: '无主题', gradient: ['transparent', 'transparent'], type: 'none' },
-            dark: { name: '深色科技', gradient: ['#1a202c', '#2d3748'], type: 'dynamic', effect: 'stars' },
-            blue: { name: '科技蓝', gradient: ['#0f172a', '#1e3a8a'], type: 'dynamic', effect: 'grid' },
-            purple: { name: '科技紫', gradient: ['#1e0f2a', '#4c1d95'], type: 'dynamic', effect: 'particles' },
-            green: { name: '科技绿', gradient: ['#0f1a1a', '#065f46'], type: 'dynamic', effect: 'digital-rain' },
-            red: { name: '科技红', gradient: ['#1a0f0f', '#991b1b'], type: 'dynamic', effect: 'energy' },
-            cyan: { name: '青色', gradient: ['#0d1a1a', '#06b6d4'], type: 'dynamic', effect: 'grid' },
-            rose: { name: '玫瑰色', gradient: ['#1a0d15', '#e11d48'], type: 'dynamic', effect: 'stars' },
-            orange: { name: '橙色', gradient: ['#1a0d0d', '#f97316'], type: 'dynamic', effect: 'particles' },
-            yellow: { name: '黄色', gradient: ['#1a1a0d', '#eab308'], type: 'dynamic', effect: 'grid' },
-            silver: { name: '银色', gradient: ['#1a1a1a', '#94a3b8'], type: 'dynamic', effect: 'stars' },
-            matrix: { name: '矩阵网格 (静态)', gradient: ['#000500', '#001a00'], type: 'static', effect: 'matrix' },
-            circuit: { name: '电子电路 (静态)', gradient: ['#050a15', '#0a1e3c'], type: 'static', effect: 'circuit' },
-            blueprint: { name: '蓝图设计 (静态)', gradient: ['#001a33', '#003366'], type: 'static', effect: 'blueprint' },
-            nebula: { name: '深邃星云 (静态)', gradient: ['#050010', '#150025'], type: 'static', effect: 'nebula' },
-            hexagon: { name: '六边形蜂巢 (静态)', gradient: ['#0a0a1a', '#1a1a3a'], type: 'static', effect: 'hexagon' },
-            radar: { name: '雷达扫描 (动态)', gradient: ['#0a0a0a', '#1a2a1a'], type: 'dynamic', effect: 'radar' },
-            cybergrid: { name: '赛博网格 (静态)', gradient: ['#0a0a1a', '#3a1a3a'], type: 'static', effect: 'cyber-grid' },
-            techchip: { name: '芯片电路 (静态)', gradient: ['#0a0a1a', '#1a2a3a'], type: 'static', effect: 'circuit' },
-            neonlines: { name: '霓虹线条 (静态)', gradient: ['#0a0a1a', '#2a1a3a'], type: 'static', effect: 'neon-lines' },
-            perspective: { name: '透视网格 (静态)', gradient: ['#050a1a', '#152a3a'], type: 'static', effect: 'perspective' },
-            deepsea: { name: '深海科技 (动态)', gradient: ['#000510', '#001a3a'], type: 'dynamic', effect: 'pulse' },
-            spacestation: { name: '核心舱 (动态)', gradient: ['#1c1c1c', '#3d3d3d'], type: 'dynamic', effect: 'scanlines' },
-            cyberpulse: { name: '赛博脉冲 (动态)', gradient: ['#120024', '#4a0082'], type: 'dynamic', effect: 'energy' },
-            datasequence: { name: '数据流 (动态)', gradient: ['#000800', '#001a00'], type: 'dynamic', effect: 'digital-rain' },
-            hologram: { name: '全息投影 (动态)', gradient: ['#001a1a', '#003333'], type: 'dynamic', effect: 'hologram' }
-        };
-        
-        // 十二星座图标映射
-        this.zodiacSigns = {
-            '白羊座': '♈',
-            '金牛座': '♉',
-            '双子座': '♊',
-            '巨蟹座': '♋',
-            '狮子座': '♌',
-            '处女座': '♍',
-            '天秤座': '♎',
-            '天蝎座': '♏',
-            '射手座': '♐',
-            '摩羯座': '♑',
-            '水瓶座': '♒',
-            '双鱼座': '♓'
-        };
-        
+        this.techParticles = []; // 科技感粒子系统（条形等特效仍可用）
+
+        // 背景主题（v2：动态/静态分类）
+        this.backgroundColor = 'dyn_contourFlow';
+        this.backgroundThemes = backgroundThemes;
+        this._lastBgThemeByCategory = { dynamic: 'dyn_contourFlow', static: 'sta_isoGrid' };
+        this.zodiacSigns = zodiacSigns;
+
         // 星座图标显示控制（默认开启）
         this.zodiacEnabled = true;
         this.rankNumberEnabled = true;
         this.rankNumberColorTheme = 'cyber-blue';
-        this.rankNumberThemePresets = {
-            'cyber-blue': { ring: 'rgba(0,255,255,0.5)', ringGlow: 'rgba(0,255,255,0.8)', texA: 'rgba(0,255,255,0.35)', texB: 'rgba(178,107,255,0.35)', g0: '#7CFDFF', g1: '#00E0FF', g2: '#0090FF', g3: '#2A00FF', glow: 'rgba(0,255,255,0.6)', outline: 'rgba(0,255,255,0.85)', halo: 'rgba(0,255,255,0.18)' },
-            'neon-pink': { ring: 'rgba(255,80,220,0.5)', ringGlow: 'rgba(255,80,220,0.85)', texA: 'rgba(255,80,220,0.35)', texB: 'rgba(120,70,255,0.35)', g0: '#FFD0FA', g1: '#FF70E6', g2: '#D14BFF', g3: '#5A26FF', glow: 'rgba(255,80,220,0.6)', outline: 'rgba(255,130,235,0.9)', halo: 'rgba(255,80,220,0.2)' },
-            'aurora-green': { ring: 'rgba(0,255,170,0.5)', ringGlow: 'rgba(0,255,170,0.85)', texA: 'rgba(0,255,170,0.35)', texB: 'rgba(0,180,255,0.35)', g0: '#D9FFF3', g1: '#44FFD0', g2: '#00E8A2', g3: '#0077C8', glow: 'rgba(0,255,170,0.6)', outline: 'rgba(70,255,200,0.9)', halo: 'rgba(0,255,170,0.2)' },
-            'golden-core': { ring: 'rgba(255,210,70,0.55)', ringGlow: 'rgba(255,210,70,0.9)', texA: 'rgba(255,210,70,0.35)', texB: 'rgba(255,130,30,0.3)', g0: '#FFF2B0', g1: '#FFD86B', g2: '#FFB536', g3: '#B36A00', glow: 'rgba(255,190,80,0.55)', outline: 'rgba(255,220,120,0.9)', halo: 'rgba(255,190,80,0.2)' },
-            'ice-silver': { ring: 'rgba(195,235,255,0.55)', ringGlow: 'rgba(210,245,255,0.9)', texA: 'rgba(220,245,255,0.35)', texB: 'rgba(130,180,220,0.3)', g0: '#FFFFFF', g1: '#E8F6FF', g2: '#BFDFFF', g3: '#7BA6D9', glow: 'rgba(190,230,255,0.55)', outline: 'rgba(230,250,255,0.95)', halo: 'rgba(200,235,255,0.2)' },
-            'lava-red': { ring: 'rgba(255,95,50,0.55)', ringGlow: 'rgba(255,120,60,0.9)', texA: 'rgba(255,110,70,0.35)', texB: 'rgba(255,180,70,0.3)', g0: '#FFE0C8', g1: '#FF9A4D', g2: '#FF5A2E', g3: '#B81500', glow: 'rgba(255,110,60,0.55)', outline: 'rgba(255,150,95,0.9)', halo: 'rgba(255,120,70,0.2)' }
-        };
+        this.rankNumberThemePresets = rankNumberThemePresets;
+
         this.rankNumberAnimDuration = 900;
         this.rankNumberAnimStart = 0;
         this._rankAnimLast = null;
-        
-        // 背景动画参数
-        this.radarAngle = 0;
-        this.radarSpeed = 0.02;
 
         // 火箭飞行特效
         this.rocketEnabled = false;
@@ -161,6 +106,10 @@ class DynamicRanking {
         
         // 初始化科技感效果
         this.initTechEffects();
+
+        // 必须在 backgroundThemes / backgroundColor 等赋值完成后再绑定 DOM
+        this.initElements();
+        this.initEventListeners();
 
         console.log('DynamicRanking initialized:', !!this);
 
@@ -184,89 +133,10 @@ class DynamicRanking {
     }
 
     /**
-     * 初始化科技感效果
+     * Canvas 尺寸变化时调用（背景 v2 无需预生成粒子数组）
      */
     initTechEffects() {
         if (!this.techEnabled) return;
-        
-        // 初始化数字雨字符
-        this.initDigitalRain();
-        
-        // 初始化网格线
-        this.initGridLines();
-        
-        // 初始化星光粒子
-        this.initStarParticles();
-    }
-
-    /**
-     * 初始化数字雨效果
-     */
-    initDigitalRain() {
-        this.digitalRainChars = [];
-        const columns = Math.floor(this.canvasWidth / 20); // 每20像素一列
-        
-        for (let i = 0; i < columns; i++) {
-            const x = i * 20 + Math.random() * 10;
-            const speed = 1 + Math.random() * 3;
-            const length = 5 + Math.floor(Math.random() * 15);
-            const chars = [];
-            
-            for (let j = 0; j < length; j++) {
-                chars.push({
-                    char: Math.floor(Math.random() * 10).toString(), // 0-9的数字
-                    y: -j * 20 - Math.random() * 100,
-                    brightness: 0.2 + (j / length) * 0.8
-                });
-            }
-            
-            this.digitalRainChars.push({ x, speed, chars });
-        }
-    }
-
-    /**
-     * 初始化网格线
-     */
-    initGridLines() {
-        this.gridLines = [];
-        const gridSize = 40;
-        
-        // 水平线
-        for (let y = 0; y < this.canvasHeight; y += gridSize) {
-            this.gridLines.push({
-                type: 'horizontal',
-                y: y,
-                opacity: 0.1
-            });
-        }
-        
-        // 垂直线
-        for (let x = 0; x < this.canvasWidth; x += gridSize) {
-            this.gridLines.push({
-                type: 'vertical',
-                x: x,
-                opacity: 0.1
-            });
-        }
-    }
-
-    /**
-     * 初始化星光粒子
-     */
-    initStarParticles() {
-        this.starParticles = [];
-        const starCount = 50;
-        
-        for (let i = 0; i < starCount; i++) {
-            this.starParticles.push({
-                x: Math.random() * this.canvasWidth,
-                y: Math.random() * this.canvasHeight,
-                size: 0.5 + Math.random() * 2,
-                brightness: 0.3 + Math.random() * 0.7,
-                twinkleSpeed: 0.5 + Math.random() * 2,
-                twinkleOffset: Math.random() * Math.PI * 2
-            });
-        }
     }
 
     /**
@@ -278,6 +148,10 @@ class DynamicRanking {
         } else if (this.backgroundThemes[theme]) {
             this.backgroundColor = theme;
             this.bgThemeEnabled = true;
+            const tc = this.backgroundThemes[theme];
+            if (tc.type === 'dynamic' || tc.type === 'static') {
+                this._lastBgThemeByCategory[tc.type] = theme;
+            }
             console.log(`背景色已切换为: ${this.backgroundThemes[theme].name}`);
         }
         
@@ -285,6 +159,52 @@ class DynamicRanking {
         if (this.isRecording || this.isPreview) {
             this.draw();
         }
+    }
+
+    syncBgCategoryFromTheme() {
+        if (!this.bgThemeCategorySelect || !this.backgroundThemes) return;
+        const t = this.backgroundThemes[this.backgroundColor];
+        if (t && (t.type === 'dynamic' || t.type === 'static')) {
+            this.bgThemeCategorySelect.value = t.type;
+        } else {
+            this.bgThemeCategorySelect.value = 'dynamic';
+        }
+    }
+
+    populateBackgroundThemeOptions(category) {
+        const sel = this.backgroundThemeSelect;
+        if (!sel || !this.backgroundThemes) return;
+        sel.innerHTML = '';
+        const noneOpt = document.createElement('option');
+        noneOpt.value = 'none';
+        noneOpt.textContent = '无主题';
+        sel.appendChild(noneOpt);
+        let firstId = null;
+        Object.keys(this.backgroundThemes).forEach((id) => {
+            const th = this.backgroundThemes[id];
+            if (th.type === category) {
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.textContent = th.name;
+                sel.appendChild(opt);
+                if (!firstId) firstId = id;
+            }
+        });
+        let nextId = null;
+        const cur = this.backgroundColor;
+        if (cur !== 'none' && this.backgroundThemes[cur] && this.backgroundThemes[cur].type === category) {
+            nextId = cur;
+        } else if (this._lastBgThemeByCategory[category]) {
+            nextId = this._lastBgThemeByCategory[category];
+        } else {
+            nextId = firstId;
+        }
+        if (nextId && Array.from(sel.options).some((o) => o.value === nextId)) {
+            sel.value = nextId;
+        } else {
+            sel.value = firstId || 'none';
+        }
+        this.changeBackgroundColor(sel.value);
     }
 
     /**
@@ -915,20 +835,25 @@ class DynamicRanking {
             });
         }
 
-        // 背景色主题选择器
+        // 背景主题：类型（动态/静态）+ 具体主题下拉
+        this.bgThemeCategorySelect = document.getElementById('bg-theme-category');
         this.backgroundThemeSelect = document.getElementById('background-theme');
-        if (this.backgroundThemeSelect) {
-            // 设置默认值
-            this.backgroundThemeSelect.value = this.backgroundColor;
-            
+        if (this.bgThemeCategorySelect && this.backgroundThemeSelect) {
+            this.syncBgCategoryFromTheme();
+            this.populateBackgroundThemeOptions(this.bgThemeCategorySelect.value);
+            this.bgThemeCategorySelect.addEventListener('change', (e) => {
+                this.populateBackgroundThemeOptions(e.target.value);
+                if (this.isPreview || this.isRecording) this.draw();
+            });
             this.backgroundThemeSelect.addEventListener('change', (e) => {
-                const theme = e.target.value;
-                this.changeBackgroundColor(theme);
-                
-                // 实时预览更新
-                if (this.isPreview || this.isRecording) {
-                    this.draw();
-                }
+                this.changeBackgroundColor(e.target.value);
+                if (this.isPreview || this.isRecording) this.draw();
+            });
+        } else if (this.backgroundThemeSelect) {
+            this.populateBackgroundThemeOptions('dynamic');
+            this.backgroundThemeSelect.addEventListener('change', (e) => {
+                this.changeBackgroundColor(e.target.value);
+                if (this.isPreview || this.isRecording) this.draw();
             });
         }
         
@@ -1023,11 +948,6 @@ class DynamicRanking {
             this.fireworkParticles = [];
             this.fireworkRockets = [];
             this.fireworkRings = [];
-            this.radarAngle = 0; // 重置雷达角度
-            this.energyParticles = []; // 清空能量粒子
-            this.digitalRainChars = []; // 重置数字雨
-            this.starParticles = []; // 重置星光粒子
-
             // 应用烟花设置
             if (this.fireworksEnableRadios.length > 0) {
                 const checkedRadio = Array.from(this.fireworksEnableRadios).find(r => r.checked);
@@ -1296,10 +1216,6 @@ class DynamicRanking {
             this.fireworkParticles = [];
             this.fireworkRockets = [];
             this.fireworkRings = [];
-            this.radarAngle = 0; // 重置雷达角度
-            this.energyParticles = []; // 清空能量粒子
-            this.digitalRainChars = []; // 重置数字雨
-            this.starParticles = []; // 重置星光粒子
 
             // 读取并应用烟花设置（从 UI）
             if (this.fireworksEnableRadios.length > 0) {
@@ -1628,647 +1544,618 @@ class DynamicRanking {
          this.ctx.restore();
      }
 
-     /**
-      * 绘制科技感背景效果
-      */
-     drawTechBackground(currentTime) {
-         if (!this.ctx || !this.techEnabled) return;
+    /**
+     * 绘制科技感背景（bg3：OLED / 威胁图 / 矩阵雨 / 神经束 / PCB / 显示器件纹 等全新概念）
+     */
+    drawTechBackground(currentTime) {
+        if (!this.ctx || !this.techEnabled) return;
 
-         const currentTheme = this.backgroundColor;
-         const themeConfig = this.backgroundThemes[currentTheme] || this.backgroundThemes.blue;
-         
-         // 1. 绘制上传的背景图（如果有）
-         if (this.bgImageObj) {
-             this.ctx.save();
-             const canvasAspect = this.canvasWidth / this.canvasHeight;
-             const imgAspect = this.bgImageObj.width / this.bgImageObj.height;
-             let drawWidth, drawHeight, offsetX, offsetY;
-             
-             if (imgAspect > canvasAspect) {
-                 drawHeight = this.canvasHeight;
-                 drawWidth = this.canvasHeight * imgAspect;
-                 offsetX = (this.canvasWidth - drawWidth) / 2;
-                 offsetY = 0;
-             } else {
-                 drawWidth = this.canvasWidth;
-                 drawHeight = this.canvasWidth / imgAspect;
-                 offsetX = 0;
-                 offsetY = (this.canvasHeight - drawHeight) / 2;
-             }
-             
-             this.ctx.globalAlpha = this.bgOpacity;
-             this.ctx.drawImage(this.bgImageObj, offsetX, offsetY, drawWidth, drawHeight);
-             this.ctx.restore();
-         } else if (!this.bgThemeEnabled) {
-             // 既没有背景图也没有启用背景主题，使用纯黑兜底
-             this.ctx.save();
-             this.ctx.fillStyle = '#000000';
-             this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
-             this.ctx.restore();
-         }
+        const fallback = this.backgroundThemes.dyn_contourFlow;
+        const currentTheme = this.backgroundColor;
+        const themeConfig = this.backgroundThemes[currentTheme] || fallback;
 
-         // 2. 绘制基础渐变背景（仅在启用背景主题时）
-         if (this.bgThemeEnabled) {
-             this.ctx.save();
-             const grad = this.ctx.createLinearGradient(0, 0, 0, this.canvasHeight);
-             
-             // 如果有背景图，渐变背景作为滤镜层，增加对比度
-             if (this.bgImageObj) {
-                 // 叠加时的透明度：背景图越透明，主题层越明显
-                 this.ctx.globalAlpha = Math.max(0.3, 0.8 - this.bgOpacity * 0.5);
-             }
-             
-             grad.addColorStop(0, themeConfig.gradient[0]);
-             grad.addColorStop(1, themeConfig.gradient[1]);
-             this.ctx.fillStyle = grad;
-             this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
-             this.ctx.restore();
+        if (this.bgImageObj) {
+            this.ctx.save();
+            const canvasAspect = this.canvasWidth / this.canvasHeight;
+            const imgAspect = this.bgImageObj.width / this.bgImageObj.height;
+            let drawWidth, drawHeight, offsetX, offsetY;
 
-             // 3. 根据效果类型绘制特效
-             if (themeConfig.type !== 'none') {
-                 this.ctx.save();
-                 // 特效层透明度也稍微降低，避免完全遮挡背景图
-                 if (this.bgImageObj) this.ctx.globalAlpha = 0.7;
+            if (imgAspect > canvasAspect) {
+                drawHeight = this.canvasHeight;
+                drawWidth = this.canvasHeight * imgAspect;
+                offsetX = (this.canvasWidth - drawWidth) / 2;
+                offsetY = 0;
+            } else {
+                drawWidth = this.canvasWidth;
+                drawHeight = this.canvasWidth / imgAspect;
+                offsetX = 0;
+                offsetY = (this.canvasHeight - drawHeight) / 2;
+            }
 
-                 switch (themeConfig.effect) {
-                     case 'matrix':
-                         this.drawMatrixGrid();
-                         break;
-                     case 'circuit':
-                         this.drawCircuitLines();
-                         break;
-                     case 'blueprint':
-                         this.drawBlueprintGrid();
-                         break;
-                     case 'nebula':
-                         this.drawNebulaEffect();
-                         break;
-                     case 'hexagon':
-                         this.drawHexagonGrid();
-                         break;
-                     case 'radar':
-                         this.drawRadarScan(currentTime);
-                         break;
-                     case 'cyber-grid':
-                         this.drawCyberGrid();
-                         break;
-                     case 'neon-lines':
-                         this.drawNeonLines();
-                         break;
-                     case 'perspective':
-                         this.drawPerspectiveGrid();
-                         break;
-                     case 'digital-rain':
-                         this.drawDigitalRain(currentTime);
-                         break;
-                     case 'grid':
-                         this.drawGridLines(currentTime);
-                         break;
-                     case 'particles':
-                         this.drawStarParticles(currentTime);
-                         this.drawEnergyParticles(currentTime);
-                         break;
-                     case 'stars':
-                         this.drawStarParticles(currentTime);
-                         break;
-                     case 'energy':
-                         this.drawEnergyParticles(currentTime);
-                         this.drawGridLines(currentTime);
-                         break;
-                     case 'pulse':
-                         this.drawPulseEffect(currentTime);
-                         break;
-                     case 'scanlines':
-                         this.drawScanLines(currentTime);
-                         break;
-                     case 'hologram':
-                         this.drawHologramEffect(currentTime);
-                         break;
-                     default:
-                         this.drawGridLines(currentTime);
-                 }
-                 this.ctx.restore();
-             }
+            this.ctx.globalAlpha = this.bgOpacity;
+            this.ctx.drawImage(this.bgImageObj, offsetX, offsetY, drawWidth, drawHeight);
+            this.ctx.restore();
+        } else if (!this.bgThemeEnabled) {
+            this.ctx.save();
+            this.ctx.fillStyle = '#000000';
+            this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+            this.ctx.restore();
+        }
 
-             // 4. 增加全屏科技感氛围层（针对动态类型）
-             if (themeConfig.type === 'dynamic') {
-                 this.drawScanBeam(currentTime);
-                 this.drawAtmosphere();
-             }
-         }
-     }
+        if (this.bgThemeEnabled) {
+            this.ctx.save();
+            const grad = this.ctx.createLinearGradient(0, 0, 0, this.canvasHeight);
+            if (this.bgImageObj) {
+                this.ctx.globalAlpha = Math.max(0.3, 0.8 - this.bgOpacity * 0.5);
+            }
+            grad.addColorStop(0, themeConfig.gradient[0]);
+            grad.addColorStop(1, themeConfig.gradient[1]);
+            this.ctx.fillStyle = grad;
+            this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+            this.ctx.restore();
 
-     /**
-      * 绘制矩阵网格
-      */
-     drawMatrixGrid() {
-         this.ctx.save();
-         this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.1)';
-         this.ctx.lineWidth = 1;
-         const matrixSize = 20;
-         for (let x = 0; x < this.canvasWidth; x += matrixSize) {
-             for (let y = 0; y < this.canvasHeight; y += matrixSize) {
-                 this.ctx.strokeRect(x, y, matrixSize, matrixSize);
-             }
-         }
-         this.ctx.restore();
-     }
+            if (themeConfig.type !== 'none' && themeConfig.effect && themeConfig.effect !== 'none') {
+                this.ctx.save();
+                if (this.bgImageObj) this.ctx.globalAlpha = 0.72;
+                this._drawBackgroundEffectV3(currentTime, themeConfig.effect);
+                this.ctx.restore();
+            }
 
-     /**
-      * 绘制电路线条
-      */
-     drawCircuitLines() {
-         this.ctx.save();
-         this.ctx.strokeStyle = 'rgba(0, 200, 255, 0.15)';
-         this.ctx.lineWidth = 1.5;
-         
-         const tempRandom = (s) => {
-             const x = Math.sin(s) * 10000;
-             return x - Math.floor(x);
-         };
-         
-         for (let i = 0; i < 40; i++) {
-             let x = tempRandom(i * 1.1) * this.canvasWidth;
-             let y = tempRandom(i * 1.2) * this.canvasHeight;
-             let len = 50 + tempRandom(i * 1.3) * 150;
-             let angle = Math.floor(tempRandom(i * 1.4) * 4) * 90;
-             
-             this.ctx.beginPath();
-             this.ctx.moveTo(x, y);
-             let dx = Math.cos(angle * Math.PI / 180) * len;
-             let dy = Math.sin(angle * Math.PI / 180) * len;
-             this.ctx.lineTo(x + dx, y + dy);
-             this.ctx.stroke();
-             this.ctx.beginPath();
-             this.ctx.arc(x, y, 3, 0, Math.PI * 2);
-             this.ctx.stroke();
-         }
-         this.ctx.restore();
-     }
+            if (themeConfig.type === 'dynamic') {
+                this.ctx.save();
+                this.drawBg3DynamicBloom(currentTime);
+                this.ctx.restore();
+            }
 
-     /**
-      * 绘制蓝图网格
-      */
-     drawBlueprintGrid() {
-         this.ctx.save();
-         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-         this.ctx.lineWidth = 0.5;
-         for (let x = 0; x < this.canvasWidth; x += 100) {
-             this.ctx.beginPath();
-             this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.canvasHeight);
-             this.ctx.stroke();
-         }
-         for (let y = 0; y < this.canvasHeight; y += 100) {
-             this.ctx.beginPath();
-             this.ctx.moveTo(0, y); this.ctx.lineTo(this.canvasWidth, y);
-             this.ctx.stroke();
-         }
-         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-         for (let x = 0; x < this.canvasWidth; x += 20) {
-             this.ctx.beginPath();
-             this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.canvasHeight);
-             this.ctx.stroke();
-         }
-         for (let y = 0; y < this.canvasHeight; y += 20) {
-             this.ctx.beginPath();
-             this.ctx.moveTo(0, y); this.ctx.lineTo(this.canvasWidth, y);
-             this.ctx.stroke();
-         }
-         this.ctx.restore();
-     }
+            if (themeConfig.type === 'static') {
+                this.ctx.save();
+                this.drawBg3StaticFrame();
+                this.ctx.restore();
+            }
+        }
+    }
 
-     /**
-      * 绘制星云效果
-      */
-     drawNebulaEffect() {
-         this.ctx.save();
-         for (let i = 0; i < 5; i++) {
-             const x = (i / 5) * this.canvasWidth + (Math.sin(i * 1.5) * 50);
-             const y = (i % 2 === 0 ? 0.3 : 0.7) * this.canvasHeight;
-             const radius = 300 + i * 50;
-             const grad = this.ctx.createRadialGradient(x, y, 0, x, y, radius);
-             grad.addColorStop(0, i % 2 === 0 ? 'rgba(100, 0, 255, 0.05)' : 'rgba(0, 100, 255, 0.05)');
-             grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-             this.ctx.fillStyle = grad;
-             this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
-         }
-         this.ctx.restore();
-     }
+    _bg3Hash(ix, iy) {
+        const s = Math.sin(ix * 12.9898 + iy * 78.233 + 19.113) * 43758.5453;
+        return s - Math.floor(s);
+    }
 
-     /**
-      * 绘制六边形蜂巢网格
-      */
-     drawHexagonGrid() {
-         this.ctx.save();
-         this.ctx.strokeStyle = 'rgba(0, 255, 255, 0.05)';
-         this.ctx.lineWidth = 1;
-         const size = 30;
-         const h = size * Math.sqrt(3);
-         for (let y = 0; y < this.canvasHeight + h; y += h) {
-             for (let x = 0; x < this.canvasWidth + size * 3; x += size * 3) {
-                 this.drawHex(x, y, size);
-                 this.drawHex(x + size * 1.5, y + h / 2, size);
-             }
-         }
-         this.ctx.restore();
-     }
+    _drawBackgroundEffectV3(currentTime, effect) {
+        switch (effect) {
+            case 'bg3_sta_terrainWire': this.drawBg3StaTerrainWire(); break;
+            case 'bg3_sta_astrolabe': this.drawBg3StaAstrolabe(); break;
+            case 'bg3_sta_starChart': this.drawBg3StaStarChart(); break;
+            case 'bg3_sta_moire': this.drawBg3StaMoire(); break;
+            case 'bg3_sta_shardBlocks': this.drawBg3StaShardBlocks(); break;
+            case 'bg3_sta_binaryRings': this.drawBg3StaBinaryRings(); break;
+            case 'bg3_dyn_aurora': this.drawBg3DynAurora(currentTime); break;
+            case 'bg3_dyn_globeDots': this.drawBg3DynGlobeDots(currentTime); break;
+            case 'bg3_dyn_glyphFall': this.drawBg3DynGlyphFall(currentTime); break;
+            case 'bg3_dyn_axonPulse': this.drawBg3DynAxonPulse(currentTime); break;
+            case 'bg3_dyn_pcbPulse': this.drawBg3DynPcbPulse(currentTime); break;
+            case 'bg3_dyn_oledArtifacts': this.drawBg3DynOledArtifacts(currentTime); break;
+            default: break;
+        }
+    }
 
-     drawHex(x, y, size) {
-         this.ctx.beginPath();
-         for (let i = 0; i < 6; i++) {
-             const angle = i * Math.PI / 3;
-             this.ctx.lineTo(x + size * Math.cos(angle), y + size * Math.sin(angle));
-         }
-         this.ctx.closePath();
-         this.ctx.stroke();
-     }
+    /** OLED 风「断角」取景框，非传统 HUD 直角括号 */
+    drawBg3StaticFrame() {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const m = 24;
+        const gap = 16;
+        const L = 34;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(210, 255, 255, 0.24)';
+        ctx.lineWidth = 1;
+        const corners = [[m, m], [w - m, m], [w - m, h - m], [m, h - m]];
+        corners.forEach(([cx, cy], i) => {
+            const sx = i === 0 || i === 3 ? 1 : -1;
+            const sy = i < 2 ? 1 : -1;
+            ctx.beginPath();
+            ctx.moveTo(cx + sx * gap, cy + sy * L);
+            ctx.lineTo(cx + sx * gap, cy + sy * gap);
+            ctx.lineTo(cx + sx * L, cy + sy * gap);
+            ctx.stroke();
+        });
+        ctx.setLineDash([3, 8]);
+        ctx.strokeStyle = 'rgba(100, 200, 255, 0.07)';
+        ctx.strokeRect(m + 12, m + 12, w - (m + 12) * 2, h - (m + 12) * 2);
+        ctx.setLineDash([]);
+        ctx.restore();
+    }
 
-     /**
-      * 绘制雷达扫描
-      */
-     drawRadarScan(currentTime) {
-         this.ctx.save();
-         const centerX = this.canvasWidth / 2;
-         const centerY = this.canvasHeight / 2;
-         const radius = Math.max(this.canvasWidth, this.canvasHeight) * 0.8;
-         
-         this.radarAngle += this.radarSpeed;
-         
-         // 1. 绘制扫描扇形
-         const grad = this.ctx.createConicGradient(this.radarAngle, centerX, centerY);
-         grad.addColorStop(0, 'rgba(0, 255, 150, 0.25)');
-         grad.addColorStop(0.1, 'rgba(0, 255, 150, 0.05)');
-         grad.addColorStop(0.2, 'rgba(0, 255, 150, 0)');
-         grad.addColorStop(1, 'rgba(0, 255, 150, 0)');
-         
-         this.ctx.fillStyle = grad;
-         this.ctx.beginPath();
-         this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-         this.ctx.fill();
-         
-         // 2. 绘制静态圆环和刻度
-         this.ctx.strokeStyle = 'rgba(0, 255, 150, 0.1)';
-         this.ctx.lineWidth = 1;
-         for (let r = 100; r < radius; r += 150) {
-             this.ctx.beginPath();
-             this.ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
-             this.ctx.stroke();
-             
-             // 增加小刻度
-             this.ctx.save();
-             this.ctx.translate(centerX, centerY);
-             for(let a=0; a<360; a+=30) {
-                 this.ctx.rotate(30 * Math.PI / 180);
-                 this.ctx.beginPath();
-                 this.ctx.moveTo(r, 0);
-                 this.ctx.lineTo(r + 10, 0);
-                 this.ctx.stroke();
-             }
-             this.ctx.restore();
-         }
-         
-         // 3. 绘制扫描波动圆环
-         const ripple = (currentTime % 2000) / 2000;
-         this.ctx.beginPath();
-         this.ctx.arc(centerX, centerY, ripple * radius, 0, Math.PI * 2);
-         this.ctx.strokeStyle = `rgba(0, 255, 150, ${0.2 * (1 - ripple)})`;
-         this.ctx.lineWidth = 2;
-         this.ctx.stroke();
+    /** 线框海拔层：透视山峦折线（非等距地砖） */
+    drawBg3StaTerrainWire() {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        ctx.save();
+        ctx.lineWidth = 1;
+        const rows = 18;
+        for (let r = 0; r < rows; r++) {
+            const z = r / rows;
+            const yBase = h * 0.38 + z * z * h * 0.62;
+            const amp = (1 - z) * 55 + 12;
+            const freq = 0.012 + z * 0.018;
+            ctx.beginPath();
+            let first = true;
+            for (let x = -20; x <= w + 20; x += 6) {
+                const n = this._bg3Hash(Math.floor(x / 20), r);
+                const y = yBase + Math.sin(x * freq + r * 0.6) * amp * (0.65 + n * 0.35);
+                if (first) {
+                    ctx.moveTo(x, y);
+                    first = false;
+                } else ctx.lineTo(x, y);
+            }
+            ctx.strokeStyle = `rgba(90, 230, 255, ${0.07 + (1 - z) * 0.12})`;
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
 
-         this.ctx.restore();
-     }
+    /** 星盘：同心虚线环 + 辐射刻度 + 装饰弧线 */
+    drawBg3StaAstrolabe() {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const cx = w * 0.5;
+        const cy = h * 0.44;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 175, 220, 0.11)';
+        ctx.lineWidth = 1;
+        const rings = [58, 102, 148, 198, 250];
+        rings.forEach((rr, idx) => {
+            ctx.setLineDash(idx % 2 ? [2, 6] : []);
+            ctx.beginPath();
+            ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+            ctx.stroke();
+        });
+        ctx.setLineDash([]);
+        ctx.strokeStyle = 'rgba(120, 220, 255, 0.14)';
+        const ticks = 72;
+        for (let i = 0; i < ticks; i++) {
+            const a = (i / ticks) * Math.PI * 2;
+            const inner = 240;
+            const outer = 252;
+            const major = i % 6 === 0;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+            ctx.lineTo(cx + Math.cos(a) * (major ? outer + 10 : outer), cy + Math.sin(a) * (major ? outer + 10 : outer));
+            ctx.stroke();
+        }
+        ctx.strokeStyle = 'rgba(0, 255, 230, 0.09)';
+        ctx.beginPath();
+        for (let k = 0; k < 5; k++) {
+            const a0 = k * 1.25 + 0.2;
+            ctx.moveTo(cx, cy);
+            ctx.quadraticCurveTo(
+                cx + Math.cos(a0) * 160,
+                cy + Math.sin(a0) * 160,
+                cx + Math.cos(a0 + 0.8) * 90,
+                cy + Math.sin(a0 + 0.8) * 90
+            );
+        }
+        ctx.stroke();
+        ctx.restore();
+    }
 
-     /**
-      * 绘制氛围光晕和暗角
-      */
-     drawAtmosphere() {
-         this.ctx.save();
-         const grad = this.ctx.createRadialGradient(
-             this.canvasWidth / 2, this.canvasHeight / 2, 0,
-             this.canvasWidth / 2, this.canvasHeight / 2, this.canvasHeight * 0.8
-         );
-         grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-         grad.addColorStop(1, 'rgba(0, 0, 0, 0.35)');
-         this.ctx.fillStyle = grad;
-         this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
-         this.ctx.restore();
-     }
+    /** 星图：随机星点 + 多组虚线「星座」折线 */
+    drawBg3StaStarChart() {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const stars = 140;
+        for (let i = 0; i < stars; i++) {
+            const x = this._bg3Hash(i, 1) * w;
+            const y = this._bg3Hash(i, 2) * h * 0.92;
+            const br = this._bg3Hash(i, 3) > 0.92 ? 0.35 : 0.1;
+            const dot = this._bg3Hash(i, 4) * 2 + 0.5;
+            ctx.fillStyle = `rgba(220, 245, 255, ${br})`;
+            ctx.beginPath();
+            ctx.arc(x, y, dot, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.strokeStyle = 'rgba(180, 160, 255, 0.22)';
+        ctx.setLineDash([2, 4]);
+        ctx.lineWidth = 1;
+        const groups = [
+            [[0.22, 0.18], [0.28, 0.14], [0.32, 0.2], [0.26, 0.26]],
+            [[0.72, 0.22], [0.78, 0.18], [0.85, 0.24], [0.8, 0.3], [0.74, 0.28]],
+            [[0.45, 0.52], [0.5, 0.48], [0.55, 0.52], [0.48, 0.58]],
+            [[0.18, 0.65], [0.25, 0.62], [0.3, 0.68], [0.22, 0.74]]
+        ];
+        groups.forEach((pts) => {
+            ctx.beginPath();
+            pts.forEach(([fx, fy], j) => {
+                const px = fx * w;
+                const py = fy * h;
+                if (j === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            });
+            ctx.stroke();
+        });
+        ctx.restore();
+    }
 
-     /**
-      * 绘制赛博网格
-      */
-     drawCyberGrid() {
-         this.ctx.save();
-         this.ctx.strokeStyle = 'rgba(255, 0, 255, 0.1)';
-         this.ctx.lineWidth = 1;
-         const gridSize = 40;
-         for (let x = 0; x < this.canvasWidth; x += gridSize) {
-             this.ctx.beginPath();
-             this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.canvasHeight);
-             this.ctx.stroke();
-         }
-         for (let y = 0; y < this.canvasHeight; y += gridSize) {
-             this.ctx.beginPath();
-             this.ctx.moveTo(0, y); this.ctx.lineTo(this.canvasWidth, y);
-             this.ctx.stroke();
-         }
-         this.ctx.restore();
-     }
+    /** 双色莫尔：两组竖线栅格小角度旋转干涉 */
+    drawBg3StaMoire() {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const cx = w / 2;
+        const cy = h / 2;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(0.11);
+        ctx.strokeStyle = 'rgba(0, 190, 255, 0.065)';
+        ctx.lineWidth = 1;
+        for (let x = -w; x < w; x += 11) {
+            ctx.beginPath();
+            ctx.moveTo(x, -h);
+            ctx.lineTo(x, h);
+            ctx.stroke();
+        }
+        ctx.rotate(-0.2);
+        ctx.strokeStyle = 'rgba(255, 100, 200, 0.052)';
+        for (let x = -w; x < w; x += 11) {
+            ctx.beginPath();
+            ctx.moveTo(x, -h);
+            ctx.lineTo(x, h);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
 
-     /**
-      * 绘制霓虹线条
-      */
-     drawNeonLines() {
-         this.ctx.save();
-         this.ctx.lineWidth = 2;
-         for (let i = 0; i < 15; i++) {
-             const x = (i * 50) % this.canvasWidth;
-             this.ctx.strokeStyle = `hsla(${i * 20}, 100%, 50%, 0.1)`;
-             this.ctx.beginPath();
-             this.ctx.moveTo(x, 0);
-             this.ctx.lineTo(x + 100, this.canvasHeight);
-             this.ctx.stroke();
-         }
-         this.ctx.restore();
-     }
+    /** 碎晶数据块：错位矩形碎片（非六边形蜂窝） */
+    drawBg3StaShardBlocks() {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const cols = 14;
+        const rows = 10;
+        const cw = w / cols;
+        const ch = h / rows;
+        ctx.save();
+        for (let j = 0; j < rows; j++) {
+            for (let i = 0; i < cols; i++) {
+                const k = this._bg3Hash(i + 3, j + 5);
+                if (k < 0.42) continue;
+                const ox = (this._bg3Hash(i, j) - 0.5) * 6;
+                const oy = (this._bg3Hash(i + 9, j) - 0.5) * 6;
+                const x = i * cw + ox;
+                const y = j * ch + oy;
+                const ww = cw * (0.55 + this._bg3Hash(i, j + 1) * 0.4) - 4;
+                const hh = ch * (0.5 + this._bg3Hash(i + 2, j) * 0.45) - 4;
+                ctx.strokeStyle = `rgba(130, 220, 255, ${0.12 + k * 0.15})`;
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x + 2, y + 2, ww, hh);
+                if (k > 0.78) {
+                    ctx.fillStyle = `rgba(80, 200, 255, ${(k - 0.78) * 0.35})`;
+                    ctx.fillRect(x + 2, y + 2, ww, hh);
+                }
+            }
+        }
+        ctx.restore();
+    }
 
-     /**
-      * 绘制透视网格
-      */
-     drawPerspectiveGrid() {
-         this.ctx.save();
-         this.ctx.strokeStyle = 'rgba(0, 150, 255, 0.15)';
-         const centerX = this.canvasWidth / 2;
-         const horizonY = this.canvasHeight * 0.4;
-         for (let i = -10; i <= 10; i++) {
-             this.ctx.beginPath();
-             this.ctx.moveTo(centerX, horizonY);
-             this.ctx.lineTo(centerX + i * 200, this.canvasHeight);
-             this.ctx.stroke();
-         }
-         for (let i = 0; i < 15; i++) {
-             const y = horizonY + Math.pow(i / 15, 2) * (this.canvasHeight - horizonY);
-             this.ctx.beginPath();
-             this.ctx.moveTo(0, y); this.ctx.lineTo(this.canvasWidth, y);
-             this.ctx.stroke();
-         }
-         this.ctx.restore();
-     }
+    /** 零一环阵：极坐标排布的二进制字符 */
+    drawBg3StaBinaryRings() {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const cx = w / 2;
+        const cy = h / 2;
+        ctx.save();
+        ctx.font = '9px ui-monospace, monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const radii = [72, 110, 148, 186];
+        radii.forEach((r, ri) => {
+            const n = Math.floor(12 + r / 10);
+            for (let i = 0; i < n; i++) {
+                const a = (i / n) * Math.PI * 2 + ri * 0.15;
+                const ch = this._bg3Hash(i + r, ri) > 0.5 ? '1' : '0';
+                const x = cx + Math.cos(a) * r;
+                const y = cy + Math.sin(a) * r;
+                ctx.fillStyle = `rgba(160, 230, 255, ${0.08 + this._bg3Hash(i, r) * 0.14})`;
+                ctx.fillText(ch, x, y);
+            }
+        });
+        ctx.restore();
+    }
 
-     /**
-      * 绘制能量粒子
-      */
-     drawEnergyParticles(currentTime) {
-         this.ctx.save();
-         
-         // 动态生成粒子
-         if (this.energyParticles.length < 40) {
-             this.energyParticles.push({
-                 x: Math.random() * this.canvasWidth,
-                 y: this.canvasHeight + 20,
-                 speed: 1 + Math.random() * 3,
-                 size: 1 + Math.random() * 4,
-                 pulse: Math.random() * Math.PI * 2,
-                 type: Math.random() > 0.7 ? 'bit' : 'spark',
-                 char: Math.random() > 0.5 ? '0' : '1',
-                 color: this.backgroundColor === 'red' ? '255, 100, 100' : '100, 200, 255'
-             });
-         }
-         
-         for (let i = this.energyParticles.length - 1; i >= 0; i--) {
-             const p = this.energyParticles[i];
-             p.y -= p.speed;
-             p.x += Math.sin(p.y / 60) * 0.8;
-             p.pulse += 0.1;
-             
-             const life = p.y / this.canvasHeight;
-             const alpha = life * (0.3 + 0.3 * Math.sin(p.pulse));
-             
-             if (p.type === 'bit') {
-                 // 绘制数据比特
-                 this.ctx.font = `bold ${p.size + 10}px monospace`;
-                 this.ctx.fillStyle = `rgba(${p.color}, ${alpha})`;
-                 this.ctx.fillText(p.char, p.x, p.y);
-             } else {
-                 // 绘制发光能量火花
-                 const grad = this.ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2);
-                 grad.addColorStop(0, `rgba(${p.color}, ${alpha})`);
-                 grad.addColorStop(1, `rgba(${p.color}, 0)`);
-                 this.ctx.fillStyle = grad;
-                 this.ctx.beginPath();
-                 this.ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
-                 this.ctx.fill();
-             }
-             
-             if (p.y < -20) this.energyParticles.splice(i, 1);
-         }
-         this.ctx.restore();
-     }
+    /** 极光幔 + 漂移星屑（非斜向渐变片叠加） */
+    drawBg3DynAurora(currentTime) {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const t = currentTime * 0.00006;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const layerColors = [
+            ['rgba(20, 140, 120, 0.06)', 'rgba(200, 100, 255, 0.07)', 'rgba(40, 200, 255, 0.08)'],
+            ['rgba(120, 255, 200, 0.05)', 'rgba(255, 80, 200, 0.05)', 'rgba(100, 180, 255, 0.07)']
+        ];
+        for (let L = 0; L < 7; L++) {
+            const wave = (x) => h * 0.28 + Math.sin(x * 0.003 + t * 3 + L * 0.9) * h * 0.12
+                + Math.sin(x * 0.009 + t * 2) * h * 0.04;
+            ctx.beginPath();
+            ctx.moveTo(0, wave(0) + L * 14);
+            for (let x = 0; x <= w; x += 12) {
+                ctx.lineTo(x, wave(x) + L * 18 + Math.sin(t + L + x * 0.02) * 8);
+            }
+            ctx.lineTo(w, h + 50);
+            ctx.lineTo(0, h + 50);
+            ctx.closePath();
+            const pal = layerColors[L % 2];
+            const g = ctx.createLinearGradient(0, 0, w, h * 0.6);
+            g.addColorStop(0, pal[0]);
+            g.addColorStop(0.45, pal[1]);
+            g.addColorStop(1, pal[2]);
+            ctx.fillStyle = g;
+            ctx.globalAlpha = 0.35 + (L % 3) * 0.08;
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        for (let s = 0; s < 90; s++) {
+            const x = this._bg3Hash(s, 8) * w;
+            const y = (this._bg3Hash(s, 9) * h + currentTime * 0.02 * (0.3 + this._bg3Hash(s, 10))) % (h + 20) - 10;
+            const sz = this._bg3Hash(s, 11) * 1.8;
+            ctx.fillStyle = `rgba(255, 255, 255, ${this._bg3Hash(s, 12) * 0.25})`;
+            ctx.beginPath();
+            ctx.arc(x, y, sz, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
 
-     /**
-      * 绘制数字雨效果
-      */
-     drawDigitalRain(currentTime) {
-         this.ctx.save();
-         this.ctx.font = 'bold 16px monospace';
-         this.ctx.textAlign = 'center';
-         
-         this.digitalRainChars.forEach(column => {
-             column.chars.forEach((char, index) => {
-                 // 更新位置
-                 char.y += column.speed;
-                 if (char.y > this.canvasHeight + 50) {
-                     char.y = -Math.random() * 100;
-                     char.char = Math.floor(Math.random() * 10).toString();
-                 }
-                 
-                 // 越靠近尾部越暗，越靠近头部越亮
-                 const isHead = index === column.chars.length - 1;
-                 const opacity = isHead ? 0.9 : char.brightness * 0.5;
-                 
-                 if (isHead) {
-                     // 头部发光效果
-                     this.ctx.shadowBlur = 10;
-                     this.ctx.shadowColor = '#fff';
-                     this.ctx.fillStyle = `rgba(200, 255, 220, ${opacity})`;
-                 } else {
-                     this.ctx.shadowBlur = 0;
-                     this.ctx.fillStyle = `rgba(0, 255, 100, ${opacity})`;
-                 }
-                 
-                 this.ctx.fillText(char.char, column.x, char.y);
-                 
-                 // 随机闪烁字符
-                 if (Math.random() > 0.98) {
-                     char.char = Math.floor(Math.random() * 10).toString();
-                 }
-             });
-         });
-         
-         this.ctx.restore();
-     }
+    /** 全球威胁点云：经纬网 + 球面点旋转（非平面雷达扇形） */
+    drawBg3DynGlobeDots(currentTime) {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const cx = w * 0.5;
+        const cy = h * 0.48;
+        const R = Math.min(w, h) * 0.36;
+        const rot = currentTime * 0.0004;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, R + 2, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.strokeStyle = 'rgba(80, 200, 255, 0.1)';
+        ctx.lineWidth = 1;
+        for (let lat = -60; lat <= 60; lat += 30) {
+            const py = cy + (lat / 90) * R * 0.85;
+            const rx = R * Math.cos(lat * Math.PI / 180);
+            const ry = R * 0.28;
+            ctx.beginPath();
+            if (typeof ctx.ellipse === 'function') {
+                ctx.ellipse(cx, py, Math.max(rx, 1), Math.max(ry, 1), 0, 0, Math.PI * 2);
+            } else {
+                ctx.save();
+                ctx.translate(cx, py);
+                ctx.scale(Math.max(rx, 1), Math.max(ry, 1));
+                ctx.beginPath();
+                ctx.arc(0, 0, 1, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+                continue;
+            }
+            ctx.stroke();
+        }
+        for (let i = 0; i < 12; i++) {
+            const a = (i / 12) * Math.PI * 2 + rot;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - R);
+            ctx.lineTo(cx + Math.sin(a) * R * 0.98, cy + Math.cos(a) * R * 0.98);
+            ctx.stroke();
+        }
+        ctx.globalCompositeOperation = 'lighter';
+        const dots = 220;
+        for (let i = 0; i < dots; i++) {
+            const u = this._bg3Hash(i, 20) * Math.PI * 2;
+            const v = (this._bg3Hash(i, 21) - 0.5) * 1.1;
+            const lon = u + rot * 2;
+            const lat = v * 1.15;
+            const xe = Math.cos(lat) * Math.sin(lon);
+            const ye = Math.sin(lat);
+            if (xe < -0.08) continue;
+            const px = cx + xe * R * 0.95;
+            const py = cy + ye * R * 0.52;
+            const b = 0.06 + (xe + 1) * 0.12;
+            ctx.fillStyle = `rgba(160, 255, 255, ${b})`;
+            ctx.beginPath();
+            ctx.arc(px, py, 1 + this._bg3Hash(i, 22) * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
 
-     /**
-      * 绘制全屏扫描光束
-      */
-     drawScanBeam(currentTime) {
-         this.ctx.save();
-         const scanPos = (currentTime % 4000) / 4000;
-         const y = scanPos * this.canvasHeight;
-         
-         const grad = this.ctx.createLinearGradient(0, y - 50, 0, y + 50);
-         grad.addColorStop(0, 'rgba(0, 255, 255, 0)');
-         grad.addColorStop(0.5, 'rgba(0, 255, 255, 0.08)');
-         grad.addColorStop(1, 'rgba(0, 255, 255, 0)');
-         
-         this.ctx.fillStyle = grad;
-         this.ctx.fillRect(0, y - 50, this.canvasWidth, 100);
-         
-         // 极细的高亮扫描线
-         this.ctx.beginPath();
-         this.ctx.moveTo(0, y);
-         this.ctx.lineTo(this.canvasWidth, y);
-         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-         this.ctx.lineWidth = 0.5;
-         this.ctx.stroke();
-         this.ctx.restore();
-     }
+    /** 同步瀑布码：多列字符下落（赛博 OLED 终端感，非贝塞尔飞线） */
+    drawBg3DynGlyphFall(currentTime) {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const cols = 28;
+        const glyphs = 'ｱｲｳｴｵ01Ø░▒って無東京'.split('');
+        ctx.save();
+        ctx.font = '11px ui-monospace, "Hiragino Sans", monospace';
+        ctx.textAlign = 'center';
+        ctx.globalCompositeOperation = 'lighter';
+        const colW = w / cols;
+        for (let c = 0; c < cols; c++) {
+            const speed = 30 + this._bg3Hash(c, 40) * 100;
+            const scroll = (currentTime * 0.05 * speed / 100 + this._bg3Hash(c, 41) * 999) % (h + 40);
+            const x = c * colW + colW / 2;
+            for (let k = -1; k < Math.ceil((h + 80) / 18); k++) {
+                const y = k * 18 + scroll;
+                if (y < -20 || y > h + 20) continue;
+                const gi = Math.floor(this._bg3Hash(c + k, 42) * glyphs.length) % glyphs.length;
+                const g = glyphs[gi];
+                const a = 0.06 + this._bg3Hash(c, k + 1) * 0.12;
+                ctx.fillStyle = k % 11 === 0 ? `rgba(200, 255, 230, ${a + 0.1})` : `rgba(100, 200, 255, ${a})`;
+                ctx.fillText(g, x, y);
+            }
+        }
+        ctx.restore();
+    }
 
-     /**
-      * 绘制网格线
-      */
-     drawGridLines(currentTime) {
-         this.ctx.save();
-         this.ctx.strokeStyle = 'rgba(0, 255, 255, 0.15)';
-         this.ctx.lineWidth = 0.5;
-         
-         this.gridLines.forEach(line => {
-             if (line.type === 'horizontal') {
-                 this.ctx.beginPath();
-                 this.ctx.moveTo(0, line.y);
-                 this.ctx.lineTo(this.canvasWidth, line.y);
-                 this.ctx.stroke();
-             } else {
-                 this.ctx.beginPath();
-                 this.ctx.moveTo(line.x, 0);
-                 this.ctx.lineTo(line.x, this.canvasHeight);
-                 this.ctx.stroke();
-             }
-         });
-         
-         this.ctx.restore();
-     }
+    /** 神经束：二次贝塞尔轴突 + 双脉冲光点 */
+    drawBg3DynAxonPulse(currentTime) {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const curveN = 14;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.lineWidth = 2;
+        for (let c = 0; c < curveN; c++) {
+            const seed = c * 17.11;
+            const p0 = { x: this._bg3Hash(seed, 1) * w, y: this._bg3Hash(seed, 2) * h };
+            const p2 = { x: this._bg3Hash(seed, 3) * w, y: this._bg3Hash(seed, 4) * h };
+            const p1 = {
+                x: (p0.x + p2.x) / 2 + (this._bg3Hash(seed, 5) - 0.5) * w * 0.4,
+                y: (p0.y + p2.y) / 2 + (this._bg3Hash(seed, 6) - 0.5) * h * 0.4
+            };
+            ctx.strokeStyle = `rgba(60, 140, 220, ${0.04 + this._bg3Hash(seed, 7) * 0.06})`;
+            ctx.beginPath();
+            ctx.moveTo(p0.x, p0.y);
+            ctx.quadraticCurveTo(p1.x, p1.y, p2.x, p2.y);
+            ctx.stroke();
 
-     /**
-      * 绘制脉冲圆环效果
-      */
-     drawPulseEffect(currentTime) {
-         this.ctx.save();
-         const centerX = this.canvasWidth / 2;
-         const centerY = this.canvasHeight / 2;
-         const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY);
-         
-         for (let i = 0; i < 3; i++) {
-             const progress = (currentTime * 0.0005 + i * 0.33) % 1;
-             const radius = progress * maxRadius;
-             const opacity = (1 - progress) * 0.15;
-             
-             this.ctx.beginPath();
-             this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-             this.ctx.strokeStyle = `rgba(0, 200, 255, ${opacity})`;
-             this.ctx.lineWidth = 2;
-             this.ctx.stroke();
-             
-             // 增加一个外发光圆环
-             this.ctx.beginPath();
-             this.ctx.arc(centerX, centerY, radius + 2, 0, Math.PI * 2);
-             this.ctx.strokeStyle = `rgba(0, 200, 255, ${opacity * 0.5})`;
-             this.ctx.lineWidth = 1;
-             this.ctx.stroke();
-         }
-         this.ctx.restore();
-     }
+            const u = (currentTime * 0.00015 + c * 0.07) % 1;
+            const omu = 1 - u;
+            const bx = omu * omu * p0.x + 2 * omu * u * p1.x + u * u * p2.x;
+            const by = omu * omu * p0.y + 2 * omu * u * p1.y + u * u * p2.y;
+            const rg = ctx.createRadialGradient(bx, by, 0, bx, by, 16);
+            rg.addColorStop(0, 'rgba(255, 255, 255, 0.55)');
+            rg.addColorStop(0.3, 'rgba(100, 255, 220, 0.2)');
+            rg.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = rg;
+            ctx.beginPath();
+            ctx.arc(bx, by, 12, 0, Math.PI * 2);
+            ctx.fill();
 
-     /**
-      * 绘制扫描线效果
-      */
-     drawScanLines(currentTime) {
-         this.ctx.save();
-         const lineGap = 4;
-         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-         this.ctx.lineWidth = 1;
-         
-         for (let y = 0; y < this.canvasHeight; y += lineGap) {
-             this.ctx.beginPath();
-             this.ctx.moveTo(0, y);
-             this.ctx.lineTo(this.canvasWidth, y);
-             this.ctx.stroke();
-         }
-         
-         // 动态扫描带
-         const scanY = (currentTime * 0.1) % (this.canvasHeight + 100) - 50;
-         const grad = this.ctx.createLinearGradient(0, scanY - 50, 0, scanY + 50);
-         grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-         grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.05)');
-         grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-         
-         this.ctx.fillStyle = grad;
-         this.ctx.fillRect(0, scanY - 50, this.canvasWidth, 100);
-         this.ctx.restore();
-     }
+            const u2 = (u + 0.45) % 1;
+            const o2 = 1 - u2;
+            const bx2 = o2 * o2 * p0.x + 2 * o2 * u2 * p1.x + u2 * u2 * p2.x;
+            const by2 = o2 * o2 * p0.y + 2 * o2 * u2 * p1.y + u2 * u2 * p2.y;
+            ctx.fillStyle = 'rgba(255, 200, 255, 0.15)';
+            ctx.beginPath();
+            ctx.arc(bx2, by2, 5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
 
-     /**
-      * 绘制全息投影效果
-      */
-     drawHologramEffect(currentTime) {
-         this.ctx.save();
-         // 基础网格
-         this.drawGridLines(currentTime);
-         
-         // 随机干扰线
-         if (Math.random() > 0.9) {
-             const y = Math.random() * this.canvasHeight;
-             this.ctx.strokeStyle = 'rgba(0, 255, 255, 0.2)';
-             this.ctx.lineWidth = 0.5;
-             this.ctx.beginPath();
-             this.ctx.moveTo(0, y);
-             this.ctx.lineTo(this.canvasWidth, y);
-             this.ctx.stroke();
-         }
-         
-         // 动态光晕层
-         const pulse = Math.sin(currentTime * 0.002) * 0.05 + 0.1;
-         const grad = this.ctx.createRadialGradient(
-             this.canvasWidth / 2, this.canvasHeight / 2, 0,
-             this.canvasWidth / 2, this.canvasHeight / 2, this.canvasWidth
-         );
-         grad.addColorStop(0, `rgba(0, 255, 255, ${pulse})`);
-         grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-         this.ctx.fillStyle = grad;
-         this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
-         
-         this.ctx.restore();
-     }
+    /** 主板电流：曼哈顿线段 + 行进光点（非透视地网） */
+    drawBg3DynPcbPulse(currentTime) {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const step = 40;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = 'rgba(0, 220, 180, 0.16)';
+        ctx.lineWidth = 1.2;
+        for (let i = 0; i < 26; i++) {
+            const seed = i * 11.7;
+            const horiz = this._bg3Hash(seed, 1) > 0.45;
+            if (horiz) {
+                const y = Math.floor(this._bg3Hash(seed, 2) * (h / step)) * step + step / 2;
+                const x0 = Math.floor(this._bg3Hash(seed, 3) * (w / step)) * step;
+                const x1 = Math.floor(this._bg3Hash(seed, 4) * (w / step)) * step;
+                const xa = Math.min(x0, x1) + 4;
+                const xb = Math.max(x0, x1) + step - 4;
+                if (xb <= xa) continue;
+                ctx.beginPath();
+                ctx.moveTo(xa, y);
+                ctx.lineTo(xb, y);
+                ctx.stroke();
+                const span = xb - xa;
+                const px = xa + ((currentTime * 0.05 + i * 37) % span);
+                ctx.fillStyle = 'rgba(255, 255, 200, 0.45)';
+                ctx.beginPath();
+                ctx.arc(px, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                const x = Math.floor(this._bg3Hash(seed, 2) * (w / step)) * step + step / 2;
+                const y0 = Math.floor(this._bg3Hash(seed, 3) * (h / step)) * step;
+                const y1 = Math.floor(this._bg3Hash(seed, 4) * (h / step)) * step;
+                const ya = Math.min(y0, y1) + 4;
+                const yb = Math.max(y0, y1) + step - 4;
+                if (yb <= ya) continue;
+                ctx.beginPath();
+                ctx.moveTo(x, ya);
+                ctx.lineTo(x, yb);
+                ctx.stroke();
+                const span = yb - ya;
+                const py = ya + ((currentTime * 0.06 + i * 29) % span);
+                ctx.fillStyle = 'rgba(180, 255, 255, 0.4)';
+                ctx.beginPath();
+                ctx.arc(x, py, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        ctx.restore();
+    }
 
-     /**
-      * 绘制星光粒子
-      */
-     drawStarParticles(currentTime) {
-         this.ctx.save();
-         
-         this.starParticles.forEach(star => {
-             // 闪烁效果
-             const twinkle = Math.sin(currentTime * 0.001 * star.twinkleSpeed + star.twinkleOffset) * 0.5 + 0.5;
-             const brightness = star.brightness * twinkle;
-             
-             this.ctx.fillStyle = `rgba(255, 255, 255, ${brightness * 0.8})`;
-             this.ctx.beginPath();
-             this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-             this.ctx.fill();
-         });
-         
-         this.ctx.restore();
-     }
+    /** OLED 显示器件感：微色差、滚动干扰带、扫描细线 */
+    drawBg3DynOledArtifacts(currentTime) {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        const shift = 2;
+        ctx.fillStyle = 'rgba(255, 0, 100, 0.02)';
+        ctx.fillRect(shift, 0, w, h);
+        ctx.fillStyle = 'rgba(0, 200, 255, 0.022)';
+        ctx.fillRect(-shift, 0, w, h);
+        ctx.globalCompositeOperation = 'lighter';
+        const bandH = 40 + (currentTime >> 7) % 80;
+        const bandY = ((currentTime * 0.035) % (h + bandH)) - bandH / 2;
+        const bg = ctx.createLinearGradient(0, bandY, 0, bandY + bandH);
+        bg.addColorStop(0, 'rgba(255,255,255,0)');
+        bg.addColorStop(0.5, 'rgba(200, 220, 255, 0.045)');
+        bg.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, bandY, w, bandH);
+        for (let i = 0; i < 6; i++) {
+            const yy = ((i * 137 + currentTime * 0.02) % h);
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.012 + (i % 3) * 0.01})`;
+            ctx.fillRect(0, yy, w, 1);
+        }
+        ctx.restore();
+    }
+
+    /** 动态主题氛围：紫边暗角 + 单次轻扫光（不再叠双层 HUD 角标） */
+    drawBg3DynamicBloom(currentTime) {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        ctx.save();
+        const vg = ctx.createRadialGradient(w / 2, h * 0.42, h * 0.12, w / 2, h * 0.5, h * 0.98);
+        vg.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        vg.addColorStop(1, 'rgba(8, 4, 20, 0.52)');
+        ctx.fillStyle = vg;
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        const sy = ((currentTime * 0.08) % (h + 120)) - 60;
+        const g = ctx.createLinearGradient(0, sy - 20, 0, sy + 20);
+        g.addColorStop(0, 'rgba(120, 200, 255, 0)');
+        g.addColorStop(0.5, 'rgba(180, 240, 255, 0.03)');
+        g.addColorStop(1, 'rgba(120, 200, 255, 0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, sy - 20, w, 40);
+        ctx.restore();
+    }
 
      /**
       * 绘制科技感条形图效果
@@ -4332,6 +4219,134 @@ class DynamicRanking {
         this.ctx.restore();
     }
 
+    /** 扁平矢量尾焰：三叉黄焰 + 内芯浅黄白（对齐参考图） */
+    _drawRocketExhaust(ctx, size, timeMs, phase, isMain) {
+        const s = size * (isMain ? 1 : 0.7);
+        const t = timeMs * 0.001 + phase;
+        const flick = 0.92 + 0.08 * Math.sin(t * 4.2);
+        const yTop = s * 0.31;
+        ctx.save();
+        const drawFlame = (scale, fill, stroke) => {
+            const w = s * 0.14 * scale * flick;
+            const mid = s * (0.52 * scale * flick);
+            const side = s * (0.38 * scale * flick);
+            ctx.beginPath();
+            ctx.moveTo(0, yTop + mid);
+            ctx.lineTo(-w * 0.75, yTop + side * 0.35);
+            ctx.quadraticCurveTo(-w * 1.35, yTop + side * 0.55, -w * 0.5, yTop);
+            ctx.lineTo(0, yTop + s * 0.04 * scale);
+            ctx.lineTo(w * 0.5, yTop);
+            ctx.quadraticCurveTo(w * 1.35, yTop + side * 0.55, w * 0.75, yTop + side * 0.35);
+            ctx.closePath();
+            ctx.fillStyle = fill;
+            ctx.fill();
+            if (stroke) {
+                ctx.strokeStyle = stroke;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        };
+        drawFlame(1, '#FFD166', null);
+        drawFlame(0.62, '#FFF9E6', 'rgba(255, 209, 102, 0.35)');
+        drawFlame(0.35, '#FFFFFF', null);
+        ctx.restore();
+    }
+
+    /**
+     * 扁平卡通火箭（参考图风）：红尖顶分面、奶油箭体分面、海军蓝弯鳍 + 底中小鳍、
+     * 红环舷窗、深灰喷口带。配色 #E63946 / #F1FAEE / #1D3557 / #FFD166
+     */
+    _drawRocketBody(ctx, size, isMain, timeMs) {
+        const s = size * (isMain ? 1 : 0.7);
+        const lw = isMain ? 1.25 : 1;
+        const R_RED = '#E63946';
+        const R_RED_D = '#C62F3A';
+        const CREAM = '#F1FAEE';
+        const CREAM_D = '#DDE8E0';
+        const NAVY = '#1D3557';
+        const NAVY_L = '#2A4A72';
+        const ENGINE = '#2B3D52';
+        ctx.save();
+
+        const yNoseTip = -s * 0.52;
+        const yNoseBase = -s * 0.34;
+        const xBody = s * 0.1;
+        const yBodyBot = s * 0.26;
+        const yEngineTop = s * 0.26;
+        const yEngineBot = s * 0.32;
+
+        const finPath = (sign) => {
+            const x0 = sign * xBody * 0.92;
+            const x1 = sign * s * 0.42;
+            ctx.beginPath();
+            ctx.moveTo(x0, s * 0.08);
+            ctx.quadraticCurveTo(sign * s * 0.22, s * 0.2, x1, s * 0.36);
+            ctx.quadraticCurveTo(sign * s * 0.28, s * 0.34, x0, yBodyBot);
+            ctx.closePath();
+        };
+        finPath(-1);
+        ctx.fillStyle = NAVY_L;
+        ctx.fill();
+        finPath(1);
+        ctx.fillStyle = NAVY;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(0, yNoseTip);
+        ctx.lineTo(-xBody * 0.92, yNoseBase);
+        ctx.lineTo(0, yNoseBase);
+        ctx.closePath();
+        ctx.fillStyle = R_RED_D;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(0, yNoseTip);
+        ctx.lineTo(0, yNoseBase);
+        ctx.lineTo(xBody * 0.92, yNoseBase);
+        ctx.closePath();
+        ctx.fillStyle = R_RED;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(-xBody, yNoseBase);
+        ctx.lineTo(-xBody, yBodyBot - s * 0.04);
+        ctx.quadraticCurveTo(-xBody, yBodyBot, 0, yBodyBot + s * 0.05);
+        ctx.quadraticCurveTo(xBody, yBodyBot, xBody, yBodyBot - s * 0.04);
+        ctx.lineTo(xBody, yNoseBase);
+        ctx.closePath();
+        const bg = ctx.createLinearGradient(-xBody, 0, xBody, 0);
+        bg.addColorStop(0, CREAM_D);
+        bg.addColorStop(0.48, CREAM_D);
+        bg.addColorStop(0.52, CREAM);
+        bg.addColorStop(1, CREAM);
+        ctx.fillStyle = bg;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(29, 53, 87, 0.25)';
+        ctx.lineWidth = lw * 0.8;
+        ctx.stroke();
+
+        const wy = -s * 0.1;
+        const wr = s * 0.055;
+        ctx.beginPath();
+        ctx.arc(0, wy, wr + s * 0.018, 0, Math.PI * 2);
+        ctx.fillStyle = R_RED;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(0, wy, wr, 0, Math.PI * 2);
+        ctx.fillStyle = NAVY;
+        ctx.fill();
+
+        ctx.fillStyle = NAVY;
+        ctx.fillRect(-s * 0.028, yEngineTop - s * 0.02, s * 0.056, s * 0.12);
+
+        ctx.fillStyle = ENGINE;
+        ctx.fillRect(-xBody * 1.02, yEngineTop, xBody * 2.04, yEngineBot - yEngineTop);
+        ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-xBody * 1.02, yEngineTop, xBody * 2.04, yEngineBot - yEngineTop);
+
+        ctx.restore();
+    }
+
     /**
      * 生成火箭编队 (1个大火箭 + 2个侧翼小火箭)
      */
@@ -4340,7 +4355,7 @@ class DynamicRanking {
         
         const centerX = this.canvasWidth / 2;
         const baseY = this.canvasHeight + 150;
-        const baseSpeed = 6 + Math.random() * 2;
+        const baseSpeed = 3.2 + Math.random() * 1.5;
 
         // 1. 主火箭 (居中)
         this.activeRockets.push({
@@ -4349,7 +4364,8 @@ class DynamicRanking {
             y: baseY,
             speed: baseSpeed,
             size: 80,
-            isMain: true
+            isMain: true,
+            phase: Math.random() * Math.PI * 2
         });
 
         // 2. 左侧翼小火箭
@@ -4359,7 +4375,8 @@ class DynamicRanking {
             y: baseY + 50, // 稍微靠后一点
             speed: baseSpeed,
             size: 50,
-            isMain: false
+            isMain: false,
+            phase: Math.random() * Math.PI * 2
         });
 
         // 3. 右侧翼小火箭
@@ -4369,7 +4386,8 @@ class DynamicRanking {
             y: baseY + 50, // 稍微靠后一点
             speed: baseSpeed,
             size: 50,
-            isMain: false
+            isMain: false,
+            phase: Math.random() * Math.PI * 2
         });
     }
 
@@ -4397,59 +4415,17 @@ class DynamicRanking {
             // 向上飞行
             rocket.y -= rocket.speed;
             
-            // 绘制火箭主体
+            const phase = rocket.phase != null ? rocket.phase : 0;
             this.ctx.save();
             this.ctx.translate(rocket.x, rocket.y);
-            
-            // 轻微左右摇摆增加动感
-            const jitter = Math.sin(currentTime * 0.01) * 2;
+            const jitter = Math.sin(currentTime * 0.008 + phase) * (rocket.isMain ? 2.2 : 1.4);
             this.ctx.translate(jitter, 0);
-            
-            // 绘制火箭尾焰特效 (在火箭下方)
-            this.ctx.save();
-            // 多层火焰效果
-            for (let j = 0; j < 3; j++) {
-                const flamePulse = Math.sin(currentTime * 0.05 + j) * 8;
-                const flameScale = 0.5 + Math.sin(currentTime * 0.03 + j) * 0.2;
-                const opacity = 0.4 + Math.random() * 0.4;
-                
-                this.ctx.save();
-                this.ctx.globalAlpha = opacity;
-                this.ctx.font = `${rocket.size * flameScale}px -apple-system, sans-serif`;
-                // 垂直向下偏移绘制火焰
-                this.ctx.fillText('🔥', 0, rocket.size * 0.5 + flamePulse + (j * 10));
-                this.ctx.restore();
-            }
-            
-            // 绘制喷气粒子感（点状）
-            const particleCount = 5;
-            for (let k = 0; k < particleCount; k++) {
-                const px = (Math.random() - 0.5) * 20;
-                const py = rocket.size * 0.6 + Math.random() * 40;
-                const pSize = 2 + Math.random() * 4;
-                this.ctx.fillStyle = Math.random() > 0.5 ? '#ff9d00' : '#ff4500';
-                this.ctx.beginPath();
-                this.ctx.arc(px, py, pSize, 0, Math.PI * 2);
-                this.ctx.fill();
-            }
-            this.ctx.restore();
 
-            // 绘制火箭图标
-            this.ctx.save();
-            // 🚀 图标通常倾斜 45 度，我们需要逆时针旋转使其垂直
-            // 注意：不同系统/字体可能略有差异，通常 -45deg (-Math.PI/4) 能纠正大部分
-            this.ctx.rotate(-Math.PI / 4);
-            
-            this.ctx.font = `${rocket.size}px -apple-system, sans-serif`;
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            // 旋转后，坐标轴也变了，由于图标中心对齐，我们直接在 (0,0) 绘制
-            this.ctx.fillText('🚀', 0, 0);
+            this._drawRocketExhaust(this.ctx, rocket.size, currentTime, phase, rocket.isMain);
+            this._drawRocketBody(this.ctx, rocket.size, rocket.isMain, currentTime);
+
             this.ctx.restore();
             
-            this.ctx.restore();
-            
-            // 如果飞出顶部则从数组移除
             if (rocket.y < -200) {
                 this.activeRockets.splice(i, 1);
             }
@@ -4457,75 +4433,4 @@ class DynamicRanking {
     }
 }
 
-// 实例化并初始化应用（在 DOM 完成后）
-window.addEventListener('DOMContentLoaded', () => {
-    try {
-        window.dynamicRanking = new DynamicRanking();
-        console.log('DynamicRanking initialized:', !!window.dynamicRanking);
-        // 简单的UI提示，帮助确认初始化成功
-        try {
-            const rc = document.getElementById('ranking-content');
-            if (rc) {
-                rc.innerHTML = '<div class="empty-state"><p>已就绪 - 点击 "运行动画" 或 "预览动画" 开始</p></div>';
-            }
-            // Fallback global listeners to ensure responsiveness
-            const runBtnFallback = document.getElementById('run-animation');
-            if (runBtnFallback && !(window.dynamicRanking && (window.dynamicRanking._runBtnBound || runBtnFallback.dataset.drBound === '1'))) {
-                runBtnFallback.addEventListener('click', () => {
-                    console.log('fallback run button clicked');
-                    try {
-                        window.dynamicRanking && window.dynamicRanking.runAnimation();
-                    } catch (err) {
-                        console.error(err);
-                    }
-                });
-                if (window.dynamicRanking) window.dynamicRanking._runBtnBound = true;
-            }
-            const previewBtnFallback = document.getElementById('preview-animation');
-            if (previewBtnFallback && !(window.dynamicRanking && (window.dynamicRanking._previewBtnBound || previewBtnFallback.dataset.drBound === '1'))) {
-                previewBtnFallback.addEventListener('click', () => {
-                    console.log('fallback preview button clicked');
-                    try {
-                        window.dynamicRanking && window.dynamicRanking.runPreview();
-                    } catch (err) {
-                        console.error(err);
-                    }
-                });
-                if (window.dynamicRanking) window.dynamicRanking._previewBtnBound = true;
-            }
-        } catch (err) {
-            // ignore
-        }
-    } catch (err) {
-        console.error('Failed to initialize DynamicRanking', err);
-        alert('初始化失败: ' + err.message);
-    }
-});
-
-// 全局错误监控，便于调试运行时错误导致的无响应
-window.addEventListener('error', (e) => {
-    try {
-        console.error('Global error captured:', e.message, e.error);
-        alert('运行时错误: ' + e.message);
-    } catch (err) { /* ignore */
-    }
-});
-window.addEventListener('unhandledrejection', (e) => {
-    try {
-        console.error('Unhandled rejection:', e.reason);
-        alert('未处理的 Promise 错误: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
-    } catch (err) { /* ignore */
-    }
-});
-
-// 在页面卸载时清理可能残留的 object URL
-window.addEventListener('beforeunload', () => {
-    try {
-        if (window.dynamicRanking && window.dynamicRanking.bgImageUrl) {
-            try { URL.revokeObjectURL(window.dynamicRanking.bgImageUrl); } catch (e) { /* ignore */ }
-            window.dynamicRanking.bgImageUrl = null;
-        }
-    } catch (e) {
-        // ignore
-    }
-});
+window.DynamicRanking = DynamicRanking;

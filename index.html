@@ -135,35 +135,15 @@
                                 </div>
                             </div>
                             <div class="setting-item">
-                                <label for="background-theme">主题颜色</label>
-                                <select id="background-theme">
-                                    <option value="none">无主题</option>
-                                    <option value="dark">深色科技</option>
-                                    <option value="blue" selected>科技蓝</option>
-                                    <option value="purple">科技紫</option>
-                                    <option value="green">科技绿</option>
-                                    <option value="red">科技红</option>
-                                    <option value="cyan">青色</option>
-                                    <option value="rose">玫瑰色</option>
-                                    <option value="orange">橙色</option>
-                                    <option value="yellow">黄色</option>
-                                    <option value="silver">银色</option>
-                                    <option value="matrix">矩阵网格 (静态)</option>
-                                    <option value="circuit">电子电路 (静态)</option>
-                                    <option value="blueprint">蓝图设计 (静态)</option>
-                                    <option value="nebula">深邃星云 (静态)</option>
-                                    <option value="hexagon">六边形蜂巢 (静态)</option>
-                                    <option value="radar">雷达扫描 (静态)</option>
-                                    <option value="cybergrid">赛博网格 (静态)</option>
-                                    <option value="techchip">芯片电路 (静态)</option>
-                                    <option value="neonlines">霓虹线条 (静态)</option>
-                                    <option value="perspective">透视网格 (静态)</option>
-                                    <option value="deepsea">深海科技 (动态)</option>
-                                    <option value="spacestation">核心舱 (动态)</option>
-                                    <option value="cyberpulse">赛博脉冲 (动态)</option>
-                                    <option value="datasequence">数据流 (动态)</option>
-                                    <option value="hologram">全息投影 (动态)</option>
+                                <label for="bg-theme-category">背景类型</label>
+                                <select id="bg-theme-category">
+                                    <option value="dynamic" selected>动态背景</option>
+                                    <option value="static">静态背景</option>
                                 </select>
+                            </div>
+                            <div class="setting-item">
+                                <label for="background-theme">科技主题</label>
+                                <select id="background-theme"></select>
                             </div>
                         </div>
                     </div>
@@ -413,6 +393,8 @@
         </div>
     </div>
 
-    <script src="js/app.js"></script>
+    <script src="js/constants.js"></script>
+    <script src="js/dynamic-ranking.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
