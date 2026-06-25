@@ -18,7 +18,27 @@ window.__dynamicRankingConstants = {
         sta_topology: { name: '星图星座素线', gradient: ['#02060a', '#0a1422'], type: 'static', effect: 'bg3_sta_starChart' },
         sta_datamatrix: { name: '双色莫尔栅', gradient: ['#030308', '#101020'], type: 'static', effect: 'bg3_sta_moire' },
         sta_hexGlow: { name: '碎晶数据块', gradient: ['#020508', '#0c1428'], type: 'static', effect: 'bg3_sta_shardBlocks' },
-        sta_velocity: { name: '零一环阵符', gradient: ['#030408', '#0c1020'], type: 'static', effect: 'bg3_sta_binaryRings' }
+        sta_velocity: { name: '零一环阵符', gradient: ['#030408', '#0c1020'], type: 'static', effect: 'bg3_sta_binaryRings' },
+        /* 静态 bg3 扩展：HUD / 六角 / 蓝图 / 透视 / 放射 / 量子 / 全息 / 示波 / 轨道 */
+        sta_hudFrame: { name: '双层 HUD 角框', gradient: ['#040610', '#0a1428'], type: 'static', effect: 'bg3_sta_hudFrame' },
+        sta_hexMesh: { name: '六角渐变密铺', gradient: ['#020608', '#081820'], type: 'static', effect: 'bg3_sta_hexMesh' },
+        sta_blueprint: { name: '蓝图工程线网', gradient: ['#020818', '#0a2038'], type: 'static', effect: 'bg3_sta_blueprint' },
+        sta_perspectiveGrid: { name: '透视静帧地网', gradient: ['#030408', '#0a1020'], type: 'static', effect: 'bg3_sta_perspectiveGrid' },
+        sta_mandalaRadials: { name: '中心放射纹样', gradient: ['#050408', '#140c20'], type: 'static', effect: 'bg3_sta_mandalaRadials' },
+        sta_quantumGate: { name: '量子门电路阵', gradient: ['#030510', '#0a1028'], type: 'static', effect: 'bg3_sta_quantumGate' },
+        sta_holoPrism: { name: '全息棱镜折面', gradient: ['#040408', '#120c28'], type: 'static', effect: 'bg3_sta_holoPrism' },
+        sta_signalWave: { name: '示波器波形屏', gradient: ['#020608', '#081820'], type: 'static', effect: 'bg3_sta_signalWave' },
+        sta_orbitTrack: { name: '航天轨道测控', gradient: ['#030408', '#0c1428'], type: 'static', effect: 'bg3_sta_orbitTrack' },
+        /* 动态 bg3 扩展：Plexus / 星云 / 流光 / 飞线 / 光雨 / 蜂窝 / 核心 / 隧道 / 全息 */
+        dyn_plexusNet: { name: 'Plexus 点线网', gradient: ['#020408', '#061018'], type: 'dynamic', effect: 'bg3_dyn_plexusNet' },
+        dyn_particleNebula: { name: '粒子星云旋涡', gradient: ['#030510', '#0a0820'], type: 'dynamic', effect: 'bg3_dyn_particleNebula' },
+        dyn_flowRibbon: { name: '多层扭曲流光', gradient: ['#040408', '#101028'], type: 'dynamic', effect: 'bg3_dyn_flowRibbon' },
+        dyn_flightArcs: { name: '弧线飞线束', gradient: ['#020608', '#081828'], type: 'dynamic', effect: 'bg3_dyn_flightArcs' },
+        dyn_lightRain: { name: '竖直光柱粒子雨', gradient: ['#030408', '#0c1428'], type: 'dynamic', effect: 'bg3_dyn_lightRain' },
+        dyn_hexScan: { name: '六角蜂窝扫描', gradient: ['#020808', '#061818'], type: 'dynamic', effect: 'bg3_dyn_hexScan' },
+        dyn_coreReactor: { name: '能量核心脉冲', gradient: ['#050408', '#180818'], type: 'dynamic', effect: 'bg3_dyn_coreReactor' },
+        dyn_dataTunnel: { name: '数据隧道纵深', gradient: ['#020408', '#0a1020'], type: 'dynamic', effect: 'bg3_dyn_dataTunnel' },
+        dyn_holoScan: { name: '全息扫描色差', gradient: ['#040408', '#101018'], type: 'dynamic', effect: 'bg3_dyn_holoScan' }
     },
 
     zodiacSigns: {

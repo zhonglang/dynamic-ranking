@@ -1634,6 +1634,24 @@ class DynamicRanking {
             case 'bg3_dyn_axonPulse': this.drawBg3DynAxonPulse(currentTime); break;
             case 'bg3_dyn_pcbPulse': this.drawBg3DynPcbPulse(currentTime); break;
             case 'bg3_dyn_oledArtifacts': this.drawBg3DynOledArtifacts(currentTime); break;
+            case 'bg3_sta_hudFrame': this.drawBg3StaHudFrame(); break;
+            case 'bg3_sta_hexMesh': this.drawBg3StaHexMesh(); break;
+            case 'bg3_sta_blueprint': this.drawBg3StaBlueprint(); break;
+            case 'bg3_sta_perspectiveGrid': this.drawBg3StaPerspectiveGrid(); break;
+            case 'bg3_sta_mandalaRadials': this.drawBg3StaMandalaRadials(); break;
+            case 'bg3_sta_quantumGate': this.drawBg3StaQuantumGate(); break;
+            case 'bg3_sta_holoPrism': this.drawBg3StaHoloPrism(); break;
+            case 'bg3_sta_signalWave': this.drawBg3StaSignalWave(); break;
+            case 'bg3_sta_orbitTrack': this.drawBg3StaOrbitTrack(); break;
+            case 'bg3_dyn_plexusNet': this.drawBg3DynPlexusNet(currentTime); break;
+            case 'bg3_dyn_particleNebula': this.drawBg3DynParticleNebula(currentTime); break;
+            case 'bg3_dyn_flowRibbon': this.drawBg3DynFlowRibbon(currentTime); break;
+            case 'bg3_dyn_flightArcs': this.drawBg3DynFlightArcs(currentTime); break;
+            case 'bg3_dyn_lightRain': this.drawBg3DynLightRain(currentTime); break;
+            case 'bg3_dyn_hexScan': this.drawBg3DynHexScan(currentTime); break;
+            case 'bg3_dyn_coreReactor': this.drawBg3DynCoreReactor(currentTime); break;
+            case 'bg3_dyn_dataTunnel': this.drawBg3DynDataTunnel(currentTime); break;
+            case 'bg3_dyn_holoScan': this.drawBg3DynHoloScan(currentTime); break;
             default: break;
         }
     }
@@ -2129,6 +2147,825 @@ class DynamicRanking {
             const yy = ((i * 137 + currentTime * 0.02) % h);
             ctx.fillStyle = `rgba(255, 255, 255, ${0.012 + (i % 3) * 0.01})`;
             ctx.fillRect(0, yy, w, 1);
+        }
+        ctx.restore();
+    }
+
+    /** 双层 HUD 角框：内外断线边框 + 边沿刻度 + 面板轮廓 */
+    drawBg3StaHudFrame() {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const m = 20;
+        const inner = m + 18;
+        ctx.save();
+        ctx.lineWidth = 1;
+        const drawCornerBracket = (cx, cy, sx, sy, len, gap) => {
+            ctx.beginPath();
+            ctx.moveTo(cx + sx * gap, cy + sy * len);
+            ctx.lineTo(cx + sx * gap, cy + sy * gap);
+            ctx.lineTo(cx + sx * len, cy + sy * gap);
+            ctx.stroke();
+        };
+        ctx.strokeStyle = 'rgba(0, 230, 255, 0.22)';
+        [[m, m], [w - m, m], [w - m, h - m], [m, h - m]].forEach(([cx, cy], i) => {
+            const sx = i === 0 || i === 3 ? 1 : -1;
+            const sy = i < 2 ? 1 : -1;
+            drawCornerBracket(cx, cy, sx, sy, 42, 10);
+        });
+        ctx.strokeStyle = 'rgba(255, 120, 220, 0.12)';
+        [[inner, inner], [w - inner, inner], [w - inner, h - inner], [inner, h - inner]].forEach(([cx, cy], i) => {
+            const sx = i === 0 || i === 3 ? 1 : -1;
+            const sy = i < 2 ? 1 : -1;
+            drawCornerBracket(cx, cy, sx, sy, 28, 6);
+        });
+        ctx.setLineDash([4, 6]);
+        ctx.strokeStyle = 'rgba(100, 200, 255, 0.08)';
+        ctx.strokeRect(inner + 8, inner + 8, w - (inner + 8) * 2, h - (inner + 8) * 2);
+        ctx.setLineDash([]);
+        ctx.strokeStyle = 'rgba(180, 240, 255, 0.1)';
+        const tickLen = 6;
+        for (let i = 0; i < 24; i++) {
+            const t = i / 24;
+            const major = i % 4 === 0;
+            const tl = major ? tickLen + 4 : tickLen;
+            const x = m + t * (w - m * 2);
+            ctx.beginPath();
+            ctx.moveTo(x, m);
+            ctx.lineTo(x, m + tl);
+            ctx.moveTo(x, h - m);
+            ctx.lineTo(x, h - m - tl);
+            ctx.stroke();
+        }
+        for (let i = 0; i < 18; i++) {
+            const t = i / 18;
+            const major = i % 3 === 0;
+            const tl = major ? tickLen + 4 : tickLen;
+            const y = m + t * (h - m * 2);
+            ctx.beginPath();
+            ctx.moveTo(m, y);
+            ctx.lineTo(m + tl, y);
+            ctx.moveTo(w - m, y);
+            ctx.lineTo(w - m - tl, y);
+            ctx.stroke();
+        }
+        ctx.strokeStyle = 'rgba(0, 255, 200, 0.06)';
+        ctx.strokeRect(w * 0.08, h * 0.72, w * 0.84, h * 0.12);
+        ctx.restore();
+    }
+
+    /** 六角渐变密铺：等距六边形网格 + 渐变描边 */
+    drawBg3StaHexMesh() {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const size = 22;
+        const hexH = size * Math.sqrt(3);
+        ctx.save();
+        ctx.lineWidth = 1;
+        for (let row = -1; row < h / hexH + 2; row++) {
+            for (let col = -1; col < w / (size * 1.5) + 2; col++) {
+                const cx = col * size * 1.5;
+                const cy = row * hexH + (col % 2 ? hexH / 2 : 0);
+                const k = this._bg3Hash(col, row);
+                if (k < 0.35) continue;
+                const pts = [];
+                for (let v = 0; v < 6; v++) {
+                    const a = (Math.PI / 3) * v - Math.PI / 6;
+                    pts.push([cx + Math.cos(a) * size * 0.92, cy + Math.sin(a) * size * 0.92]);
+                }
+                ctx.beginPath();
+                pts.forEach(([px, py], vi) => {
+                    if (vi === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                });
+                ctx.closePath();
+                const g = ctx.createLinearGradient(cx - size, cy - size, cx + size, cy + size);
+                g.addColorStop(0, `rgba(0, 220, 200, ${0.06 + k * 0.1})`);
+                g.addColorStop(0.5, `rgba(100, 180, 255, ${0.08 + k * 0.12})`);
+                g.addColorStop(1, `rgba(200, 100, 255, ${0.05 + k * 0.08})`);
+                ctx.strokeStyle = g;
+                ctx.stroke();
+                if (k > 0.82) {
+                    ctx.fillStyle = `rgba(80, 200, 255, ${(k - 0.82) * 0.25})`;
+                    ctx.fill();
+                }
+            }
+        }
+        ctx.restore();
+    }
+
+    /** 蓝图工程线网：双线路 + 圆孔标注 + 对齐虚线 */
+    drawBg3StaBlueprint() {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(60, 160, 255, 0.14)';
+        ctx.lineWidth = 1;
+        const step = 48;
+        for (let x = 0; x <= w; x += step) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, h);
+            ctx.stroke();
+        }
+        for (let y = 0; y <= h; y += step) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(w, y);
+            ctx.stroke();
+        }
+        ctx.setLineDash([6, 8]);
+        ctx.strokeStyle = 'rgba(100, 200, 255, 0.08)';
+        for (let x = step / 2; x <= w; x += step) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, h);
+            ctx.stroke();
+        }
+        for (let y = step / 2; y <= h; y += step) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(w, y);
+            ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        ctx.strokeStyle = 'rgba(180, 230, 255, 0.16)';
+        for (let i = 0; i < 14; i++) {
+            const cx = this._bg3Hash(i, 70) * w;
+            const cy = this._bg3Hash(i, 71) * h;
+            const r = 8 + this._bg3Hash(i, 72) * 18;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(cx, cy, r * 0.35, 0, Math.PI * 2);
+            ctx.stroke();
+            const ax = cx + r + 6;
+            ctx.beginPath();
+            ctx.moveTo(cx + r, cy);
+            ctx.lineTo(ax + 20, cy);
+            ctx.stroke();
+        }
+        ctx.strokeStyle = 'rgba(0, 200, 255, 0.06)';
+        ctx.beginPath();
+        ctx.moveTo(w * 0.1, h * 0.3);
+        ctx.lineTo(w * 0.9, h * 0.3);
+        ctx.moveTo(w * 0.1, h * 0.7);
+        ctx.lineTo(w * 0.9, h * 0.7);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    /** 透视静帧地网：消失点网格（无扫描动画） */
+    drawBg3StaPerspectiveGrid() {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const vx = w * 0.5;
+        const vy = h * 0.38;
+        ctx.save();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(0, 210, 255, 0.1)';
+        const horizLines = 16;
+        for (let i = 0; i <= horizLines; i++) {
+            const t = i / horizLines;
+            const y = vy + Math.pow(t, 1.8) * (h - vy + 20);
+            const spread = 0.15 + t * 0.85;
+            ctx.beginPath();
+            ctx.moveTo(vx - w * spread, y);
+            ctx.lineTo(vx + w * spread, y);
+            ctx.strokeStyle = `rgba(80, 220, 255, ${0.04 + t * 0.12})`;
+            ctx.stroke();
+        }
+        const vertCount = 14;
+        for (let i = -vertCount; i <= vertCount; i++) {
+            const bx = vx + i * 38;
+            ctx.beginPath();
+            ctx.moveTo(vx, vy);
+            ctx.lineTo(bx, h + 10);
+            ctx.strokeStyle = `rgba(100, 200, 255, ${0.05 + (1 - Math.abs(i) / vertCount) * 0.08})`;
+            ctx.stroke();
+        }
+        ctx.strokeStyle = 'rgba(200, 255, 255, 0.08)';
+        ctx.beginPath();
+        ctx.arc(vx, vy, 4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    /** 中心放射纹样：曼陀罗式细线 + 暗角肌理 */
+    drawBg3StaMandalaRadials() {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const cx = w * 0.5;
+        const cy = h * 0.45;
+        ctx.save();
+        const rays = 48;
+        for (let i = 0; i < rays; i++) {
+            const a = (i / rays) * Math.PI * 2;
+            const len = Math.min(w, h) * (0.35 + this._bg3Hash(i, 80) * 0.15);
+            const major = i % 6 === 0;
+            ctx.strokeStyle = major
+                ? `rgba(255, 180, 220, ${0.1 + this._bg3Hash(i, 81) * 0.06})`
+                : `rgba(120, 220, 255, ${0.04 + this._bg3Hash(i, 82) * 0.05})`;
+            ctx.lineWidth = major ? 1.2 : 0.8;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len);
+            ctx.stroke();
+        }
+        ctx.strokeStyle = 'rgba(200, 160, 255, 0.08)';
+        [40, 72, 108, 148].forEach((r) => {
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.stroke();
+        });
+        const vg = ctx.createRadialGradient(cx, cy, h * 0.05, cx, cy, h * 0.75);
+        vg.addColorStop(0, 'rgba(0,0,0,0)');
+        vg.addColorStop(0.6, 'rgba(0,0,0,0)');
+        vg.addColorStop(1, 'rgba(6, 2, 16, 0.45)');
+        ctx.fillStyle = vg;
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+    }
+
+    /** 量子门电路阵：量子比特线 + 门符号框 + 控制连线 */
+    drawBg3StaQuantumGate() {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const lanes = 6;
+        const laneH = h * 0.55 / lanes;
+        const startY = h * 0.22;
+        const startX = w * 0.08;
+        const endX = w * 0.92;
+        ctx.save();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(80, 200, 255, 0.14)';
+        for (let l = 0; l < lanes; l++) {
+            const y = startY + l * laneH;
+            ctx.beginPath();
+            ctx.moveTo(startX, y);
+            ctx.lineTo(endX, y);
+            ctx.stroke();
+        }
+        const gates = [
+            { lane: 0, x: 0.22, label: 'H' },
+            { lane: 1, x: 0.18, label: 'X' },
+            { lane: 2, x: 0.35, label: 'C' },
+            { lane: 3, x: 0.35, label: '•' },
+            { lane: 4, x: 0.52, label: 'Z' },
+            { lane: 5, x: 0.48, label: 'T' },
+            { lane: 0, x: 0.62, label: 'M' },
+            { lane: 2, x: 0.72, label: 'H' },
+            { lane: 4, x: 0.78, label: 'S' }
+        ];
+        ctx.font = '10px ui-monospace, monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        gates.forEach((g, i) => {
+            const gx = startX + (endX - startX) * g.x;
+            const gy = startY + g.lane * laneH;
+            if (g.label === '•') {
+                ctx.fillStyle = 'rgba(255, 180, 100, 0.35)';
+                ctx.beginPath();
+                ctx.arc(gx, gy, 4, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (g.label === 'C') {
+                ctx.strokeStyle = 'rgba(200, 120, 255, 0.2)';
+                ctx.beginPath();
+                ctx.arc(gx, gy, 10, 0, Math.PI * 2);
+                ctx.stroke();
+                const cy2 = startY + 3 * laneH;
+                ctx.strokeStyle = 'rgba(200, 120, 255, 0.12)';
+                ctx.setLineDash([3, 4]);
+                ctx.beginPath();
+                ctx.moveTo(gx, gy + 10);
+                ctx.lineTo(gx, cy2 - 4);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            } else {
+                const bw = 22;
+                const bh = 18;
+                ctx.strokeStyle = `rgba(100, 220, 255, ${0.16 + this._bg3Hash(i, 120) * 0.1})`;
+                ctx.strokeRect(gx - bw / 2, gy - bh / 2, bw, bh);
+                ctx.fillStyle = `rgba(0, 200, 255, ${0.06 + this._bg3Hash(i, 121) * 0.08})`;
+                ctx.fillRect(gx - bw / 2, gy - bh / 2, bw, bh);
+                ctx.fillStyle = 'rgba(200, 240, 255, 0.35)';
+                ctx.fillText(g.label, gx, gy);
+            }
+        });
+        ctx.restore();
+    }
+
+    /** 全息棱镜折面：多层三角折线分割 + 渐变描边 */
+    drawBg3StaHoloPrism() {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        ctx.save();
+        ctx.lineWidth = 1;
+        const facets = [
+            [[0.1, 0.15], [0.45, 0.08], [0.35, 0.42], [0.05, 0.38]],
+            [[0.45, 0.08], [0.88, 0.12], [0.75, 0.45], [0.35, 0.42]],
+            [[0.05, 0.38], [0.35, 0.42], [0.28, 0.78], [0.08, 0.85]],
+            [[0.35, 0.42], [0.75, 0.45], [0.65, 0.82], [0.28, 0.78]],
+            [[0.75, 0.45], [0.92, 0.55], [0.85, 0.88], [0.65, 0.82]]
+        ];
+        const colors = [
+            ['rgba(0, 220, 200, 0.08)', 'rgba(0, 220, 200, 0.18)'],
+            ['rgba(100, 180, 255, 0.07)', 'rgba(100, 180, 255, 0.16)'],
+            ['rgba(200, 100, 255, 0.06)', 'rgba(200, 100, 255, 0.14)'],
+            ['rgba(255, 180, 100, 0.06)', 'rgba(255, 180, 100, 0.13)'],
+            ['rgba(120, 255, 200, 0.07)', 'rgba(120, 255, 200, 0.15)']
+        ];
+        facets.forEach((pts, fi) => {
+            ctx.beginPath();
+            pts.forEach(([fx, fy], j) => {
+                const px = fx * w;
+                const py = fy * h;
+                if (j === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            });
+            ctx.closePath();
+            ctx.fillStyle = colors[fi][0];
+            ctx.fill();
+            ctx.strokeStyle = colors[fi][1];
+            ctx.stroke();
+        });
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+        ctx.beginPath();
+        ctx.moveTo(w * 0.45, h * 0.08);
+        ctx.lineTo(w * 0.35, h * 0.42);
+        ctx.lineTo(w * 0.75, h * 0.45);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    /** 示波器波形屏：多通道正弦/锯齿静帧 + 网格 */
+    drawBg3StaSignalWave() {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const ox = w * 0.06;
+        const oy = h * 0.28;
+        const pw = w * 0.88;
+        const ph = h * 0.44;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(60, 180, 255, 0.1)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(ox, oy, pw, ph);
+        for (let x = ox; x <= ox + pw; x += pw / 12) {
+            ctx.beginPath();
+            ctx.moveTo(x, oy);
+            ctx.lineTo(x, oy + ph);
+            ctx.stroke();
+        }
+        for (let y = oy; y <= oy + ph; y += ph / 6) {
+            ctx.beginPath();
+            ctx.moveTo(ox, y);
+            ctx.lineTo(ox + pw, y);
+            ctx.stroke();
+        }
+        const channels = [
+            { color: 'rgba(0, 255, 200, 0.35)', freq: 0.025, amp: ph * 0.18, phase: 0, yOff: ph * 0.25 },
+            { color: 'rgba(100, 180, 255, 0.3)', freq: 0.04, amp: ph * 0.12, phase: 1.2, yOff: ph * 0.5 },
+            { color: 'rgba(255, 120, 200, 0.28)', freq: 0.018, amp: ph * 0.15, phase: 2.5, yOff: ph * 0.75 }
+        ];
+        channels.forEach((ch) => {
+            ctx.strokeStyle = ch.color;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            let first = true;
+            for (let x = 0; x <= pw; x += 3) {
+                const t = x / pw;
+                const y = oy + ch.yOff + Math.sin(x * ch.freq + ch.phase) * ch.amp
+                    + Math.sin(x * ch.freq * 3 + ch.phase) * ch.amp * 0.15;
+                if (first) {
+                    ctx.moveTo(ox + x, y);
+                    first = false;
+                } else ctx.lineTo(ox + x, y);
+            }
+            ctx.stroke();
+        });
+        ctx.font = '9px ui-monospace, monospace';
+        ctx.fillStyle = 'rgba(120, 220, 255, 0.25)';
+        ctx.fillText('CH1  CH2  CH3', ox + 8, oy - 8);
+        ctx.restore();
+    }
+
+    /** 航天轨道测控：椭圆轨道环 + 地面站弧 + 星体标记 */
+    drawBg3StaOrbitTrack() {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const cx = w * 0.5;
+        const cy = h * 0.46;
+        ctx.save();
+        ctx.lineWidth = 1;
+        const orbits = [
+            { rx: w * 0.38, ry: h * 0.14, rot: -0.25, alpha: 0.14 },
+            { rx: w * 0.32, ry: h * 0.11, rot: 0.15, alpha: 0.1 },
+            { rx: w * 0.26, ry: h * 0.08, rot: -0.08, alpha: 0.08 }
+        ];
+        orbits.forEach((o) => {
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(o.rot);
+            ctx.strokeStyle = `rgba(80, 220, 255, ${o.alpha})`;
+            ctx.setLineDash([4, 8]);
+            ctx.beginPath();
+            if (typeof ctx.ellipse === 'function') {
+                ctx.ellipse(0, 0, o.rx, o.ry, 0, 0, Math.PI * 2);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        });
+        ctx.strokeStyle = 'rgba(200, 160, 255, 0.12)';
+        ctx.beginPath();
+        ctx.arc(w * 0.5, h * 0.88, w * 0.42, Math.PI + 0.3, Math.PI * 2 - 0.3);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255, 220, 120, 0.35)';
+        ctx.beginPath();
+        ctx.arc(cx + w * 0.28, cy - h * 0.06, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(180, 240, 255, 0.3)';
+        ctx.beginPath();
+        ctx.arc(cx - w * 0.18, cy + h * 0.04, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0, 255, 200, 0.08)';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + w * 0.28, cy - h * 0.06);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    /** Plexus 点线网：粒子漂移 + 距离阈值连线 */
+    drawBg3DynPlexusNet(currentTime) {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const t = currentTime * 0.00008;
+        const count = 55;
+        const pts = [];
+        for (let i = 0; i < count; i++) {
+            const bx = this._bg3Hash(i, 90) * w;
+            const by = this._bg3Hash(i, 91) * h;
+            const amp = 18 + this._bg3Hash(i, 92) * 30;
+            pts.push({
+                x: bx + Math.sin(t * 2 + i * 0.7) * amp,
+                y: by + Math.cos(t * 1.6 + i * 0.5) * amp,
+                br: 0.1 + this._bg3Hash(i, 93) * 0.15
+            });
+        }
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.lineWidth = 1;
+        const maxDist = 95;
+        for (let i = 0; i < count; i++) {
+            for (let j = i + 1; j < count; j++) {
+                const dx = pts[i].x - pts[j].x;
+                const dy = pts[i].y - pts[j].y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < maxDist) {
+                    const a = 0.18 * (1 - dist / maxDist);
+                    ctx.strokeStyle = `rgba(100, 220, 255, ${a})`;
+                    ctx.beginPath();
+                    ctx.moveTo(pts[i].x, pts[i].y);
+                    ctx.lineTo(pts[j].x, pts[j].y);
+                    ctx.stroke();
+                }
+            }
+        }
+        pts.forEach((p) => {
+            ctx.fillStyle = `rgba(180, 240, 255, ${p.br})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.restore();
+    }
+
+    /** 粒子星云：加法混合 + 慢速旋涡漂移 */
+    drawBg3DynParticleNebula(currentTime) {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const cx = w * 0.5;
+        const cy = h * 0.42;
+        const t = currentTime * 0.00005;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const count = 120;
+        for (let i = 0; i < count; i++) {
+            const seed = i * 3.17;
+            const baseR = 40 + this._bg3Hash(seed, 1) * Math.min(w, h) * 0.38;
+            const baseA = this._bg3Hash(seed, 2) * Math.PI * 2;
+            const spin = t * (0.4 + this._bg3Hash(seed, 3) * 0.6) + baseA;
+            const wobble = Math.sin(t * 3 + i) * 12;
+            const px = cx + Math.cos(spin) * (baseR + wobble);
+            const py = cy + Math.sin(spin) * (baseR * 0.55 + wobble * 0.5);
+            const sz = 0.8 + this._bg3Hash(seed, 4) * 2.2;
+            const br = 0.04 + this._bg3Hash(seed, 5) * 0.14;
+            const pal = i % 4;
+            const colors = [
+                `rgba(100, 220, 255, ${br})`,
+                `rgba(200, 120, 255, ${br})`,
+                `rgba(120, 255, 200, ${br})`,
+                `rgba(255, 200, 120, ${br * 0.8})`
+            ];
+            ctx.fillStyle = colors[pal];
+            ctx.beginPath();
+            ctx.arc(px, py, sz, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        const ng = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(w, h) * 0.35);
+        ng.addColorStop(0, 'rgba(80, 160, 255, 0.04)');
+        ng.addColorStop(0.5, 'rgba(180, 80, 255, 0.03)');
+        ng.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = ng;
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+    }
+
+    /** 多层扭曲流光带：旋转线性渐变近似液态效果 */
+    drawBg3DynFlowRibbon(currentTime) {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const cx = w * 0.5;
+        const cy = h * 0.5;
+        const t = currentTime * 0.00012;
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        const layers = 5;
+        for (let L = 0; L < layers; L++) {
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(t * (0.3 + L * 0.15) + L * 1.2);
+            const rw = w * (0.55 + L * 0.08);
+            const rh = h * (0.12 + L * 0.04);
+            const g = ctx.createLinearGradient(-rw, 0, rw, 0);
+            const phase = Math.sin(t * 2 + L) * 0.5 + 0.5;
+            g.addColorStop(0, 'rgba(0,0,0,0)');
+            g.addColorStop(0.2 + phase * 0.1, `rgba(0, 220, 200, ${0.03 + L * 0.008})`);
+            g.addColorStop(0.5, `rgba(180, 80, 255, ${0.05 + L * 0.01})`);
+            g.addColorStop(0.8 - phase * 0.1, `rgba(100, 180, 255, ${0.04 + L * 0.008})`);
+            g.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.ellipse(0, Math.sin(t + L) * h * 0.06, rw, rh, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+        ctx.restore();
+    }
+
+    /** 弧线飞线束：贝塞尔轨迹 + 头尾辉光粒子往返 */
+    drawBg3DynFlightArcs(currentTime) {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const arcN = 10;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.lineWidth = 1.2;
+        for (let c = 0; c < arcN; c++) {
+            const seed = c * 13.7;
+            const x0 = this._bg3Hash(seed, 1) * w * 0.3;
+            const y0 = h * 0.15 + this._bg3Hash(seed, 2) * h * 0.2;
+            const x2 = w * 0.7 + this._bg3Hash(seed, 3) * w * 0.3;
+            const y2 = h * 0.55 + this._bg3Hash(seed, 4) * h * 0.35;
+            const cx1 = (x0 + x2) / 2 + (this._bg3Hash(seed, 5) - 0.5) * w * 0.3;
+            const cy1 = Math.min(y0, y2) - 40 - this._bg3Hash(seed, 6) * 80;
+            ctx.strokeStyle = `rgba(80, 200, 255, ${0.06 + this._bg3Hash(seed, 7) * 0.06})`;
+            ctx.beginPath();
+            ctx.moveTo(x0, y0);
+            ctx.quadraticCurveTo(cx1, cy1, x2, y2);
+            ctx.stroke();
+            const u = (currentTime * 0.0002 + c * 0.11) % 1;
+            const omu = 1 - u;
+            const hx = omu * omu * x0 + 2 * omu * u * cx1 + u * u * x2;
+            const hy = omu * omu * y0 + 2 * omu * u * cy1 + u * u * y2;
+            const rg = ctx.createRadialGradient(hx, hy, 0, hx, hy, 14);
+            rg.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
+            rg.addColorStop(0.4, 'rgba(100, 255, 220, 0.15)');
+            rg.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = rg;
+            ctx.beginPath();
+            ctx.arc(hx, hy, 10, 0, Math.PI * 2);
+            ctx.fill();
+            const u2 = (u + 0.5) % 1;
+            const o2 = 1 - u2;
+            const tx = o2 * o2 * x0 + 2 * o2 * u2 * cx1 + u2 * u2 * x2;
+            const ty = o2 * o2 * y0 + 2 * o2 * u2 * cy1 + u2 * u2 * y2;
+            ctx.fillStyle = 'rgba(255, 200, 100, 0.2)';
+            ctx.beginPath();
+            ctx.arc(tx, ty, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    /** 竖直光柱粒子雨：沿 Y 轴下落的光带与光点 */
+    drawBg3DynLightRain(currentTime) {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const cols = 18;
+        const colW = w / cols;
+        for (let c = 0; c < cols; c++) {
+            const speed = 80 + this._bg3Hash(c, 100) * 160;
+            const x = c * colW + colW * 0.5 + (this._bg3Hash(c, 101) - 0.5) * colW * 0.4;
+            const headY = ((currentTime * 0.06 * speed / 100 + this._bg3Hash(c, 102) * h) % (h + 120)) - 60;
+            const trailLen = 40 + this._bg3Hash(c, 103) * 80;
+            const g = ctx.createLinearGradient(x, headY - trailLen, x, headY + 8);
+            g.addColorStop(0, 'rgba(100, 200, 255, 0)');
+            g.addColorStop(0.6, `rgba(120, 220, 255, ${0.04 + this._bg3Hash(c, 104) * 0.06})`);
+            g.addColorStop(1, `rgba(255, 255, 255, ${0.12 + this._bg3Hash(c, 105) * 0.1})`);
+            ctx.fillStyle = g;
+            ctx.fillRect(x - 1.5, headY - trailLen, 3, trailLen + 8);
+            ctx.fillStyle = `rgba(220, 250, 255, ${0.25 + this._bg3Hash(c, 106) * 0.2})`;
+            ctx.beginPath();
+            ctx.arc(x, headY, 2 + this._bg3Hash(c, 107), 0, Math.PI * 2);
+            ctx.fill();
+        }
+        for (let s = 0; s < 60; s++) {
+            const px = this._bg3Hash(s, 110) * w;
+            const py = ((this._bg3Hash(s, 111) * h + currentTime * (0.04 + this._bg3Hash(s, 112) * 0.08)) % (h + 20)) - 10;
+            ctx.fillStyle = `rgba(180, 230, 255, ${this._bg3Hash(s, 113) * 0.2})`;
+            ctx.fillRect(px, py, 1, 3 + this._bg3Hash(s, 114) * 6);
+        }
+        ctx.restore();
+    }
+
+    /** 六角蜂窝扫描：网格 + 沿 Y 轴移动的高亮扫描带 */
+    drawBg3DynHexScan(currentTime) {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const size = 20;
+        const hexH = size * Math.sqrt(3);
+        const t = currentTime * 0.00015;
+        const scanY = ((currentTime * 0.12) % (h + 80)) - 40;
+        ctx.save();
+        ctx.lineWidth = 1;
+        for (let row = -1; row < h / hexH + 2; row++) {
+            for (let col = -1; col < w / (size * 1.5) + 2; col++) {
+                const cx = col * size * 1.5;
+                const cy = row * hexH + (col % 2 ? hexH / 2 : 0);
+                const distToScan = Math.abs(cy - scanY);
+                const highlight = Math.max(0, 1 - distToScan / 60);
+                ctx.strokeStyle = `rgba(0, 220, 180, ${0.05 + highlight * 0.2})`;
+                ctx.beginPath();
+                for (let v = 0; v < 6; v++) {
+                    const a = (Math.PI / 3) * v - Math.PI / 6;
+                    const px = cx + Math.cos(a) * size * 0.9;
+                    const py = cy + Math.sin(a) * size * 0.9;
+                    if (v === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.stroke();
+                if (highlight > 0.5) {
+                    ctx.fillStyle = `rgba(0, 255, 200, ${highlight * 0.06})`;
+                    ctx.fill();
+                }
+            }
+        }
+        ctx.globalCompositeOperation = 'lighter';
+        const g = ctx.createLinearGradient(0, scanY - 30, 0, scanY + 30);
+        g.addColorStop(0, 'rgba(0,255,200,0)');
+        g.addColorStop(0.5, 'rgba(0,255,200,0.06)');
+        g.addColorStop(1, 'rgba(0,255,200,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, scanY - 30, w, 60);
+        ctx.restore();
+    }
+
+    /** 能量核心脉冲：中心辉光 + 多层脉冲环 + 十字光束 */
+    drawBg3DynCoreReactor(currentTime) {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const cx = w * 0.5;
+        const cy = h * 0.46;
+        const t = currentTime * 0.001;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, 50);
+        core.addColorStop(0, 'rgba(255, 200, 100, 0.12)');
+        core.addColorStop(0.4, 'rgba(255, 80, 120, 0.08)');
+        core.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = core;
+        ctx.fillRect(0, 0, w, h);
+        for (let i = 0; i < 4; i++) {
+            const phase = (t * 0.8 + i * 0.25) % 1;
+            const rr = 30 + phase * Math.min(w, h) * 0.38;
+            ctx.strokeStyle = `rgba(255, 120, 80, ${0.22 * (1 - phase)})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        ctx.strokeStyle = 'rgba(255, 180, 100, 0.06)';
+        ctx.lineWidth = 1;
+        for (let b = 0; b < 8; b++) {
+            const a = (b / 8) * Math.PI * 2 + t * 0.3;
+            const len = Math.min(w, h) * 0.42;
+            const pulse = 0.7 + Math.sin(t * 4 + b) * 0.3;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(a) * len * pulse, cy + Math.sin(a) * len * pulse * 0.4);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    /** 数据隧道纵深：透视网格向中心流动 */
+    drawBg3DynDataTunnel(currentTime) {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const cx = w * 0.5;
+        const cy = h * 0.5;
+        const t = (currentTime * 0.0002) % 1;
+        ctx.save();
+        ctx.lineWidth = 1;
+        const layers = 14;
+        for (let i = 0; i < layers; i++) {
+            const z = ((i / layers + t) % 1);
+            const scale = 0.08 + z * 0.92;
+            const alpha = z < 0.15 ? z / 0.15 * 0.15 : (1 - z) * 0.18;
+            const rw = w * scale * 0.48;
+            const rh = h * scale * 0.48;
+            ctx.strokeStyle = `rgba(0, 220, 255, ${alpha})`;
+            ctx.strokeRect(cx - rw, cy - rh, rw * 2, rh * 2);
+            const div = 4;
+            for (let d = 1; d < div; d++) {
+                const frac = d / div;
+                ctx.beginPath();
+                ctx.moveTo(cx - rw + rw * 2 * frac, cy - rh);
+                ctx.lineTo(cx - rw + rw * 2 * frac, cy + rh);
+                ctx.moveTo(cx - rw, cy - rh + rh * 2 * frac);
+                ctx.lineTo(cx + rw, cy - rh + rh * 2 * frac);
+                ctx.stroke();
+            }
+        }
+        ctx.globalCompositeOperation = 'lighter';
+        const tg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(w, h) * 0.15);
+        tg.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
+        tg.addColorStop(0.5, 'rgba(0, 200, 255, 0.04)');
+        tg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = tg;
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+    }
+
+    /** 全息扫描色差：水平扫描带 + RGB 微偏移 + 细线栅 */
+    drawBg3DynHoloScan(currentTime) {
+        const ctx = this.ctx;
+        const w = this.canvasWidth;
+        const h = this.canvasHeight;
+        const scanY = ((currentTime * 0.1) % (h + 60)) - 30;
+        const jitter = Math.sin(currentTime * 0.003) * 1.5;
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.fillStyle = 'rgba(255, 0, 120, 0.018)';
+        ctx.fillRect(jitter, 0, w, h);
+        ctx.fillStyle = 'rgba(0, 200, 255, 0.02)';
+        ctx.fillRect(-jitter, 0, w, h);
+        ctx.globalCompositeOperation = 'lighter';
+        const bandH = 50;
+        const g = ctx.createLinearGradient(0, scanY - bandH / 2, 0, scanY + bandH / 2);
+        g.addColorStop(0, 'rgba(0,255,200,0)');
+        g.addColorStop(0.35, 'rgba(100,255,220,0.05)');
+        g.addColorStop(0.5, 'rgba(255,255,255,0.08)');
+        g.addColorStop(0.65, 'rgba(180,120,255,0.05)');
+        g.addColorStop(1, 'rgba(0,255,200,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, scanY - bandH / 2, w, bandH);
+        ctx.strokeStyle = 'rgba(180, 240, 255, 0.06)';
+        ctx.lineWidth = 1;
+        for (let y = 0; y < h; y += 14) {
+            const wave = Math.sin(y * 0.04 + currentTime * 0.002) * 3;
+            ctx.beginPath();
+            ctx.moveTo(0, y + wave);
+            ctx.lineTo(w, y + wave);
+            ctx.stroke();
+        }
+        for (let i = 0; i < 40; i++) {
+            const px = this._bg3Hash(i, 130) * w;
+            const py = (this._bg3Hash(i, 131) * h + currentTime * 0.03) % h;
+            ctx.fillStyle = `rgba(200, 240, 255, ${this._bg3Hash(i, 132) * 0.15})`;
+            ctx.fillRect(px, py, 2, 1);
         }
         ctx.restore();
     }
@@ -4083,12 +4920,52 @@ class DynamicRanking {
     }
     
     /**
+     * 解析弹幕内容列表（支持换行或空格分隔）
+     */
+    _parseDanmakuTexts() {
+        return (this.danmakuContent || '')
+            .split(/[\n\s]+/)
+            .map(text => text.trim())
+            .filter(text => text.length > 0);
+    }
+
+    /**
+     * 获取当前屏幕上已有弹幕的文本集合
+     * @param {Object|null} excludeItem 排除的弹幕对象（用于回收时排除自身旧文本）
+     */
+    _getActiveDanmakuTexts(excludeItem = null) {
+        const active = new Set();
+        for (const d of this.danmakuList) {
+            if (d === excludeItem || !d.text) continue;
+            active.add(d.text);
+        }
+        return active;
+    }
+
+    /**
+     * 选取当前未在屏幕上显示的弹幕文本
+     * @param {Object|null} excludeItem 回收弹幕时传入，避免把自身旧文本算作占用
+     * @returns {string|null}
+     */
+    _pickUniqueDanmakuText(excludeItem = null) {
+        const all = this._parseDanmakuTexts();
+        if (all.length === 0) return null;
+        const active = this._getActiveDanmakuTexts(excludeItem);
+        const available = all.filter(t => !active.has(t));
+        if (available.length === 0) return null;
+        return available[Math.floor(Math.random() * available.length)];
+    }
+
+    /**
      * 更新并绘制弹幕
      */
     updateAndDrawDanmaku(currentTime) {
         if (!this.danmakuEnabled || !this.ctx) return;
 
-        // 生成新弹幕
+        const danmakuTexts = this._parseDanmakuTexts();
+        if (danmakuTexts.length === 0) return;
+
+        // 生成新弹幕：实例数不超过内容条数，且同一文本不能重复出现
         if (currentTime - this.lastDanmakuSpawn > this.danmakuSpawnInterval) {
             this.spawnDanmaku();
             this.lastDanmakuSpawn = currentTime;
@@ -4097,22 +4974,36 @@ class DynamicRanking {
         // 更新和绘制现有弹幕
         for (let i = this.danmakuList.length - 1; i >= 0; i--) {
             const danmaku = this.danmakuList[i];
+
+            // 屏外等待：所有文本均在显示中时，暂停直到有空位
+            if (danmaku.waiting) {
+                const text = this._pickUniqueDanmakuText(danmaku);
+                if (!text) continue;
+                danmaku.waiting = false;
+                danmaku.text = text;
+                danmaku.x = -200;
+                danmaku.y = 50 + Math.random() * (this.canvasHeight - 100);
+                danmaku.speed = 0.5 + Math.random() * 1;
+                danmaku.size = this.danmakuSize;
+                danmaku.color = this.danmakuColor;
+                danmaku.bold = this.danmakuBold;
+                danmaku.italic = this.danmakuItalic;
+                danmaku.underline = this.danmakuUnderline;
+            }
             
-            // 更新位置
             danmaku.x += danmaku.speed;
             
-            // 实现轮播效果：当弹幕超出屏幕右侧时，重新从左侧进入
+            // 轮播：超出右侧后重新从左侧进入，但须选取当前未显示的文本
             if (danmaku.x > this.canvasWidth + 100) {
-                // 重新定位到左侧，并随机选择新的弹幕内容，支持换行或空格分隔
-                const danmakuTexts = this.danmakuContent.split(/[\n\s]+/).map(text => text.trim()).filter(text => text.length > 0);
-                if (danmakuTexts.length > 0) {
-                    danmaku.text = danmakuTexts[Math.floor(Math.random() * danmakuTexts.length)];
+                const text = this._pickUniqueDanmakuText(danmaku);
+                if (!text) {
+                    danmaku.waiting = true;
+                    continue;
                 }
-                danmaku.x = -200; // 重新从左侧外进入
-                danmaku.y = 50 + Math.random() * (this.canvasHeight - 100); // 随机垂直位置
-                danmaku.speed = 0.5 + Math.random() * 1; // 随机速度
-                
-                // 更新样式（以便实时预览变化）
+                danmaku.text = text;
+                danmaku.x = -200;
+                danmaku.y = 50 + Math.random() * (this.canvasHeight - 100);
+                danmaku.speed = 0.5 + Math.random() * 1;
                 danmaku.size = this.danmakuSize;
                 danmaku.color = this.danmakuColor;
                 danmaku.bold = this.danmakuBold;
@@ -4121,30 +5012,28 @@ class DynamicRanking {
                 continue;
             }
 
-            // 绘制弹幕
             this.drawDanmaku(danmaku);
         }
     }
     
     /**
-     * 生成单个弹幕
+     * 生成单个弹幕（同一文本任意时刻仅允许一条）
      */
     spawnDanmaku() {
-        // 解析弹幕内容，支持换行或空格分隔
-        const danmakuTexts = this.danmakuContent.split(/[\n\s]+/).map(text => text.trim()).filter(text => text.length > 0);
+        const danmakuTexts = this._parseDanmakuTexts();
         if (danmakuTexts.length === 0) return;
+        // 每种内容最多一个实例
+        if (this.danmakuList.length >= danmakuTexts.length) return;
+
+        const text = this._pickUniqueDanmakuText();
+        if (!text) return;
         
-        // 随机选择一条弹幕内容
-        const text = danmakuTexts[Math.floor(Math.random() * danmakuTexts.length)];
-        
-        // 随机生成弹幕的垂直位置和速度
         const y = 50 + Math.random() * (this.canvasHeight - 100);
-        const speed = 0.5 + Math.random() * 1; // 0.5-1.5px/frame，降低速度
+        const speed = 0.5 + Math.random() * 1;
         
         this.danmakuList.push({
-            id: Math.random(),
             text: text,
-            x: -200, // 从屏幕左侧外进入
+            x: -200,
             y: y,
             speed: speed,
             color: this.danmakuColor,
